@@ -1,0 +1,35 @@
+ATUALIZAÇÃO — ATELIÊ DE PEDIDOS EMOÇÕES FLORES
+
+Você já tem o sistema funcionando. Não é necessário criar outro banco.
+
+1. No terminal do sistema, pressione Ctrl+C para parar o servidor. Se perguntar se deseja finalizar o arquivo em lotes, confirme com S.
+2. Guarde uma cópia do seu arquivo .env em local privado: ele contém sua senha e chave administrativa. Não compartilhe esse arquivo.
+3. Baixe o ZIP atualizado do GitHub e extraia em uma pasta temporária.
+4. Abra a pasta extraída que contém server.js e package.json.
+5. Copie os arquivos e pastas dessa pasta para a pasta atual do seu sistema (a mesma onde você executa npm start). Aceite substituir os arquivos do projeto.
+6. Preserve o .env existente. O ZIP não inclui .env: .env.example é apenas um modelo e não substitui sua configuração. Não copie apenas a pasta externa Projeto-main, copie o conteúdo que contém server.js.
+7. Abra o terminal na pasta atual do sistema e execute:
+
+   npm ci
+   npm test
+   npm start
+
+8. Confirme a mensagem: Floricultura iniciada (SQL Server).
+9. No navegador, abra http://localhost:3000/admin.html e pressione Ctrl+F5 para carregar os arquivos novos.
+10. Entre com a mesma chave administrativa do seu .env e abra Pedidos.
+
+A atualização não altera a estrutura das tabelas. Não recrie o banco nem apague pedidos antigos. Não é preciso conceder db_ddladmin novamente se as duas tabelas já existem.
+
+CONFIRA A PERSISTÊNCIA
+Crie um pedido de teste com dados fictícios, confira-o no painel, reinicie o servidor e veja se ele continua lá. Você também pode registrar uma alteração nas observações e conferir o histórico após o reinício. Não registre pagamentos reais como teste; registro de recebimento é manual e não realiza cobrança ou estorno.
+
+PRINCIPAIS NOVIDADES
+- Lista/cartões e detalhes do pedido na mesma tela.
+- Cadastro manual, filtros por etapa/modalidade/data e busca.
+- Ocasião, orientações do arranjo, substituição e cartão anônimo.
+- Conferência de arranjo, cartão, embalagem e responsáveis.
+- Registro manual de recebimento integral, sem gateway.
+- Fluxos próprios de entrega e retirada com histórico.
+- Impressão de ficha da produção e cartão do presente separado.
+
+O catálogo ainda é de exemplo e não tem editor/estoque. A consulta SQL continua limitada aos 200 pedidos mais recentes. Mais detalhes no README.md.

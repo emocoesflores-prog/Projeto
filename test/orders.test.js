@@ -47,13 +47,13 @@ test('Entrega, retirada e pagamento antecipado ainda pendente', async () => {
     assert.equal(orders[4].status, 'Aguardando pagamento');
     assert.equal(orders[4].paymentStatus, 'pending');
     response = await fetch(base + '/api/admin/orders/' + order.id, {
-      method: 'PATCH', headers, body: JSON.stringify({ status: 'Entregue' })
+      method: 'PATCH', headers, body: JSON.stringify({ action:'status', version:0, status:'Entregue' })
     });
     assert.equal(response.status, 400, 'Não libera entrega sem pagamento integrado');
     response = await fetch(base + '/api/admin/orders/' + order.id, {
-      method: 'PATCH', headers, body: JSON.stringify({ status: 'Cancelado' })
+      method: 'PATCH', headers, body: JSON.stringify({ action:'status', version:0, status:'Cancelado', reason:'Cancelado pelo cliente' })
     });
-    assert.equal(response.status, 204);
+    assert.equal(response.status, 200);
     for (const invalid of [
       { ...data, city: 'São Paulo' }, { ...data, city: undefined },
       { ...data, address: '' }, { ...data, paymentMethod: 'cash' },
