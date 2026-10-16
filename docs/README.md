@@ -11,3 +11,11 @@ As imagens abaixo mostram a versão 1.2 em demonstração, com catálogo ilustra
 ![PDV com catálogo e venda atual](pdv.png)
 
 ![Seleção de dia e faixa de horário](pdv-agendamento.png)
+
+## Busca e cadastro de clientes · versão 1.3
+
+Cadastros e telefones abaixo são fictícios e foram criados apenas para validação em modo demonstração.
+
+![Busca de cliente antes da modalidade no PDV](pdv-clientes.png)
+
+![Cadastro separado com nome e WhatsApp obrigatórios](cadastro-cliente.png)

@@ -41,9 +41,11 @@ SQL_TRUST_CERTIFICATE=false
 
 A porta deve corresponder à sua instância. A conexão é criptografada. Somente em desenvolvimento local com certificado próprio, use `SQL_TRUST_CERTIFICATE=true`; em produção, use certificado confiável e `false`.
 
-`sql/schema.sql` cria `dbo.Orders` e `dbo.StoreSettings` na primeira inicialização, sem redefinir uma taxa já existente. Execute essa criação com uma conta de migração ou conceda temporariamente a permissão necessária. Depois, a conta da aplicação necessita apenas de SELECT, INSERT e UPDATE nas tabelas. Não é necessário manter `db_ddladmin`.
+`sql/schema.sql` cria `dbo.Orders` e `dbo.StoreSettings`, sem redefinir a taxa. A versão 1.3 adiciona o cadastro independente `dbo.Customers` por meio de **sql/customers.sql**. Execute os scripts no SSMS com uma conta autorizada a criar tabelas; para a instalação padrão o banco é `Floricultura`. O script de clientes contém `USE [Floricultura]`; se configurou outro banco, ajuste essa linha antes de executar. Depois, a conta da aplicação necessita apenas de SELECT, INSERT e UPDATE. Não é necessário conceder `db_ddladmin` à aplicação.
 
-Esta atualização da gestão de pedidos **não altera as tabelas e não exige recriar o banco**. Novos campos, preços registrados, histórico e versão do pedido usam a coluna JSON existente. Pedidos antigos continuam legíveis: histórico e preços individuais antigos não são inventados, e o total original é preservado. Alterações SQL usam transação com bloqueio da linha e conferência de versão para evitar sobrescrever uma operação feita em outra tela.
+Em uma instalação nova, crie o banco, selecione-o no SSMS, execute `sql/schema.sql` e depois `sql/customers.sql`. Em uma instalação existente, execute somente `sql/customers.sql`. O aplicativo informa a ausência do cadastro caso você tente iniciar antes dessa etapa.
+
+A versão 1.3 **adiciona uma tabela de clientes e não exige recriar o banco**. O script pode ser executado novamente: não apaga pedidos, não redefine clientes existentes e importa nomes/telefones válidos dos pedidos anteriores, agrupados pelo WhatsApp normalizado. Os campos dos pedidos, preços registrados, histórico e versão continuam usando a coluna JSON existente. Pedidos antigos continuam legíveis: histórico e preços individuais antigos não são inventados, e o total original é preservado. Alterações SQL usam transação com bloqueio da linha e conferência de versão para evitar sobrescrever uma operação feita em outra tela.
 
 O proprietário confirmou a conexão da primeira versão com seu SQL Server local. Os novos fluxos desta atualização foram testados em demonstração neste ambiente; a persistência dessas novas operações ainda deve ser conferida na máquina do proprietário. O SQL Server local não é acessível automaticamente pela nuvem. Não exponha a porta do banco à internet.
 
@@ -53,13 +55,25 @@ O botão **Novo pedido** abre uma tela de PDV com catálogo à esquerda e resumo
 
 Os três primeiros campos do resumo são:
 
-1. **Modalidade:** Venda na Loja (padrão), Retirada, Entrega.
-2. **Cliente:** consumidor final opcional em venda na loja; nome, telefone e destinatário obrigatórios para retirada/entrega. A busca reutiliza contatos dos pedidos carregados, sem CRM independente.
+1. **Cliente:** busca por nome ou WhatsApp no cadastro do banco, com navegação por teclado. A opção **Novo cliente** abre cadastro separado, aproveitando o texto digitado. Somente nome e WhatsApp são obrigatórios. Venda na loja continua aceitando consumidor final, desde que a busca esteja limpa.
+2. **Modalidade:** Venda na Loja (padrão), Retirada, Entrega.
 3. **Atendimento:** Pedido para agora (padrão), Realizar agendamento.
+
+Cliente é quem compra. O destinatário do presente fica em outro campo: selecionar o comprador não preenche automaticamente o endereço nem o nome de quem recebe. Retirada e entrega exigem selecionar um cliente cadastrado no PDV e informar destinatário; entrega exige endereço e cidade atendida.
 
 **Pedido para agora** não reserva hora e recebe data/período do servidor no fuso de São Paulo. **Realizar agendamento** abre uma janela para escolher dia e faixa; Cancelar/fechar preserva a escolha anterior e a ação “É um pedido para agora?” remove o agendamento. O seletor oferece os próximos 90 dias. As faixas iniciais, seguindo as referências fornecidas, são 09:10–10:50, 10:50–12:30, 13:40–15:20, 15:20–17:00 e 17:00–18:40, compartilhadas em `public/order-options.js`. Não se presume fechamento aos domingos/feriados; configure regras reais de funcionamento numa evolução do calendário. Faixas já encerradas são bloqueadas em São Paulo. Uma faixa em andamento ainda pode ser selecionada: o sistema não verifica capacidade ou prazo de preparo.
 
 Venda na loja e retirada não cobram frete. Entrega exige endereço e cidade atendida, cobrando a taxa configurada. Ocasião, mensagem, substituição e cuidados com o presente ficam nos campos expansíveis. O botão **Registrar pedido** cria um pedido aguardando pagamento, sem cobrar ou confirmar recebimento. O rascunho fica somente em memória; fechar pede confirmação quando há dados, e um novo PDV começa com os padrões iniciais. Não há controle financeiro de caixa, leitor de código de barras, suspensão de vendas, descontos nem produtos personalizados nesta versão.
+
+## Cadastro de clientes
+
+O menu **Clientes** consulta os cadastros do banco, independentemente de terem pedidos. No PDV, pesquise por nome (sem diferenciar acentos/maiúsculas) ou telefone parcial/formatado e selecione o resultado. A lista retorna até 20 resultados por consulta em toda a tabela; refine a busca quando necessário. Não existe limite vinculado aos 200 pedidos carregados no painel.
+
+**Novo cliente** pode ser aberto pelo PDV ou pelo menu Clientes. Nome (mínimo de 3 caracteres) e WhatsApp brasileiro com DDD são os únicos campos obrigatórios. E-mail, nascimento, gênero, CEP, endereço, preferências de flores/presentes e notas internas são opcionais; se preenchidos, têm validação de formato. O telefone é normalizado com prefixo 55 e protegido por restrição única no banco. O sistema valida o formato, mas não verifica se existe uma conta ativa no WhatsApp.
+
+Depois de salvar pelo PDV, o cadastro é selecionado automaticamente sem perder o carrinho ou o agendamento. O novo pedido guarda `customerId` e uma cópia do nome/telefone recuperados pelo servidor. A busca não usa os dados dos últimos pedidos, e falhas de rede não são tratadas como cliente inexistente. Notas e dados opcionais não aparecem na lista resumida; o perfil completo é acessível somente na área administrativa. Clientes existentes podem ser consultados; edição/exclusão de cadastro ainda não foram implementadas. Alterar um pedido não altera automaticamente o cadastro do comprador nem o histórico de outros pedidos.
+
+No SQL Server, a tabela `dbo.Customers` mantém identidade, nome, telefone único e os opcionais em JSON. Em demo, esse cadastro é independente e fica em memória, sendo perdido ao reiniciar. O script de importação recupera contatos válidos de pedidos antigos sem modificar esses pedidos. Cadastros futuros de clientes feitos apenas na loja pública não são automaticamente incorporados ao diretório nesta versão; o operador pode cadastrá-los pelo painel. As rotas de cadastro e busca exigem ADMIN_TOKEN. Não existem envios automáticos pelo WhatsApp.
 
 ## Ateliê de pedidos
 
@@ -98,7 +112,7 @@ O cancelamento exige motivo. Se houver recebimento registrado, o sistema sinaliz
 
 A taxa única vale para as três cidades e pode ser alterada em **Configurações** entre R$ 0 e R$ 1.000. O novo valor é aplicado apenas aos novos pedidos, mantendo o frete original dos anteriores. Em SQL Server, a configuração persiste ao reiniciar; em demo, volta a R$ 20. O catálogo e suas ilustrações são exemplos; edição de catálogo e controle de estoque ainda não existem.
 
-A consulta atual carrega até **200 pedidos recentes** no SQL Server. As abas, clientes, agenda, indicadores e CSV usam esse conjunto, indicado na tela; não são relatórios históricos completos. Filtro de data usa o agendamento, não a data de criação. O histórico da aba corresponde a pedidos encerrados presentes nesse conjunto. O PDV agenda por dia/faixa de horário; a loja pública mantém dia/período. Não há reserva de capacidade nem validação de feriados. Não há controle de estoque, reembolso integrado, fiscal, marketing nem roteirização automática.
+A consulta de pedidos carrega até **200 pedidos recentes** no SQL Server. As abas de pedidos, agenda, indicadores e CSV usam esse conjunto, indicado na tela; não são relatórios históricos completos. Filtro de data usa o agendamento, não a data de criação. O histórico da aba corresponde a pedidos encerrados presentes nesse conjunto. O PDV agenda por dia/faixa de horário; a loja pública mantém dia/período. Não há reserva de capacidade nem validação de feriados. Não há controle de estoque, reembolso integrado, fiscal, marketing nem roteirização automática.
 
 Para vender publicamente ainda é necessário configurar HTTPS, acesso ao servidor web, disponibilidade, backup, privacidade/LGPD, catálogo real, regras de capacidade e autenticação por usuários com permissões. Iniciar localmente ou enviar ao GitHub não publica o site na internet.
 
@@ -112,4 +126,6 @@ Os testes exercitam autorização administrativa, preço imposto pelo servidor, 
 
 Também foi validado em Chromium: cadastro/edição manual, confirmação de recebimento, checklist, preparo, retirada, cartão anônimo sem notas internas, abas, mudança de layout, acesso móvel e logout. Os testes de aplicação usam o modo demo; não substituem a validação de persistência no SQL Server instalado na máquina do proprietário.
 
-A versão 1.2 também foi validada com 15 testes automatizados e fluxo Chromium do PDV: padrões iniciais, consumidor final, venda na loja, retirada agendada, entrega para agora, frete, cancelamento do diálogo de agendamento, retorno para agora, busca/seleção de cliente e produto, preservação na edição, descarte de rascunho e layout móvel. Os novos campos usam o JSON existente, sem mudança nas tabelas SQL.
+A versão anterior 1.2 foi validada com 15 testes automatizados e fluxo Chromium do PDV: padrões iniciais, consumidor final, venda na loja, retirada agendada, entrega para agora, frete, cancelamento do diálogo de agendamento, retorno para agora, busca/seleção de cliente e produto, preservação na edição, descarte de rascunho e layout móvel. Os novos campos usam o JSON existente, sem mudança nas tabelas SQL.
+
+A versão 1.3 tem 19 testes automatizados, incluindo cadastro obrigatório/opcional, busca por nome/telefone, normalização/duplicidade, cliente sem pedido, autenticação e vínculo entre cliente e pedido. Foram testados no Chromium o novo fluxo de busca/cadastro, preenchimento só dos obrigatórios, perfil completo, seleção por teclado, inversão dos campos, preservação do carrinho, erro de busca e telas móveis. **A migração SQL desta versão não foi executada na máquina do proprietário por este ambiente**; execute o script no SSMS e confira cadastro/busca após reiniciar o sistema para validar sua persistência local.
