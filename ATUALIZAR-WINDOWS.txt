@@ -1,4 +1,4 @@
-ATUALIZAÇÃO 1.3 — CADASTRO DE CLIENTES EMOÇÕES FLORES
+ATUALIZAÇÃO 1.4 — ENTREGAS, ENDEREÇOS E HISTÓRICO EMOÇÕES FLORES
 
 Você já tem o sistema funcionando. Não é necessário criar outro banco.
 
@@ -8,12 +8,8 @@ Você já tem o sistema funcionando. Não é necessário criar outro banco.
 4. Abra a pasta extraída que contém server.js e package.json.
 5. Copie os arquivos e pastas dessa pasta para a pasta atual do seu sistema (a mesma onde você executa npm start). Aceite substituir os arquivos do projeto.
 6. Preserve o .env existente. O ZIP não inclui .env: .env.example é apenas um modelo e não substitui sua configuração. Não copie apenas a pasta externa Projeto-main, copie o conteúdo que contém server.js.
-7. Esta versão adiciona a tabela de clientes. Antes de iniciar o sistema:
-   - Abra o SQL Server Management Studio com sua autenticação do Windows, usando a conta que criou o banco.
-   - Vá em Arquivo > Abrir > Arquivo e escolha sql/customers.sql, dentro da pasta atual do projeto.
-   - O script usa o banco Floricultura. Caso tenha configurado outro nome, ajuste USE [Floricultura] antes de executar.
-   - Pressione F5. Aguarde a mensagem de execução concluída com êxito.
-   - Não recrie o banco e não apague tabelas. Não é preciso conceder db_ddladmin ao usuário floricultura_app.
+7. Se você já executou sql/customers.sql e vê dbo.Customers no banco, NÃO é preciso executar outro SQL. A versão 1.4 usa os campos JSON existentes. Não recrie o banco e não apague tabelas.
+   Somente se ainda não tem dbo.Customers: abra sql/customers.sql no SSMS com a conta que criou o banco, confira USE [Floricultura] e pressione F5.
 
 8. Abra o terminal na pasta atual do sistema e execute:
 
@@ -25,12 +21,28 @@ Você já tem o sistema funcionando. Não é necessário criar outro banco.
 10. No navegador, abra http://localhost:3000/admin.html e pressione Ctrl+F5 para carregar os arquivos novos.
 11. Entre com a mesma chave administrativa do seu .env e abra Pedidos.
 
-Esta atualização cria dbo.Customers e recupera nomes/telefones válidos dos pedidos antigos. Pode executar o script novamente: ele não apaga pedidos nem sobrescreve cadastros existentes. As tabelas anteriores de pedidos e configurações continuam iguais. Se surgir a mensagem "Cadastro de clientes ainda não instalado", execute o passo 7 e tente novamente.
+Esta atualização mantém pedidos e cadastros existentes. Não é preciso conceder db_ddladmin ao usuário da aplicação. Endereços e versões ficam no JSON da tabela de clientes já criada.
+
+A CONSULTA DE CEP PRECISA DE INTERNET
+O Node.js no seu computador precisa acessar https://viacep.com.br. Não é necessário configurar chave de API. Sem internet, a tela informa a falha e permite preencher o endereço manualmente. O número sempre deve ser informado.
 
 CONFIRA A PERSISTÊNCIA
-Cadastre um cliente de teste pelo PDV ou menu Clientes, reinicie o servidor e pesquise pelo nome e WhatsApp para confirmar que o cadastro permanece. Crie também um pedido de teste com dados fictícios, confira-o no painel, reinicie o servidor e veja se ele continua lá. Você também pode registrar uma alteração nas observações e conferir o histórico após o reinício. Não registre pagamentos reais como teste; registro de recebimento é manual e não realiza cobrança ou estorno.
+1. Abra Novo pedido, selecione um cliente e escolha Entrega.
+2. Cadastre um endereço com dados de teste, número, destinatário e telefone.
+3. Cadastre um segundo endereço para o mesmo cliente.
+4. Edite o primeiro endereço e confira o botão Histórico.
+5. Reinicie o servidor e pesquise o mesmo cliente; os dois endereços e as versões anteriores devem continuar disponíveis.
+6. Confira que um pedido registrado antes da edição conserva o endereço original.
+Não registre pagamentos reais como teste: registro de recebimento é manual e não realiza cobrança ou estorno.
 
 PRINCIPAIS NOVIDADES
+- Máscara de telefone e CEP durante a digitação.
+- Entrega abre popup com endereços do cliente.
+- Mais de um endereço/destinatário por comprador, para reutilizar em próximas compras.
+- Nome e telefone de quem recebe o presente, sem confundir com o comprador.
+- CEP busca rua/bairro; número é obrigatório.
+- Cada edição guarda o histórico anterior; não altera pedidos antigos.
+- Gerenciar endereços também no perfil do cliente.
 - Cliente vem antes da modalidade na venda atual.
 - Busca por nome ou WhatsApp na tabela de clientes, sem depender de pedidos carregados.
 - Novo cliente abre cadastro: nome e WhatsApp são obrigatórios; o restante é opcional.

@@ -12,6 +12,8 @@ const {defaults,settingsSchema}=require('./store-settings');
 const {OrderError}=require('./order-domain');
 const {createOrderStore}=require('./order-store');
 const {createCustomerStore}=require('./customer-store');
+const {formatAddress}=require('./address-domain');
+const lookupCep=require('./cep-service').createCepService();
 const app=express(),demo=process.env.DATA_MODE==='demo';
 let pool,demoSettings={...defaults};
 const store=createOrderStore({demo,getPool:()=>pool});
@@ -33,11 +35,21 @@ async function createOrder(body,source){
  if(!body||typeof body!=='object'||Array.isArray(body))throw new OrderError('Informe os dados do pedido.',400);
  if(source==='site'&&(body.fulfillment==='store'||body.scheduleMode==='now'))throw new OrderError('A loja online aceita apenas entrega ou retirada agendada.',400);
  const candidate={...body};
+ let savedAddress=null;
+ if(source==='manual'&&body.fulfillment==='delivery'&&(!body.customerId||!body.deliveryAddressId))throw new OrderError('Selecione um cliente e salve ou escolha o endereço de entrega.',400);
  if(source==='manual'&&body.customerId){
   if(!z.uuid().safeParse(body.customerId).success)throw new OrderError('Cadastro de cliente inválido.',400);
   const customer=await customers.get(body.customerId);
   if(!customer)throw new OrderError('Cliente não encontrado. Pesquise e selecione novamente.',404);
   candidate.customer=customer.name;candidate.phone=customer.phone;
+  if(body.fulfillment==='delivery'){
+   if(!z.uuid().safeParse(body.deliveryAddressId).success)throw new OrderError('Endereço de entrega inválido.',400);
+   savedAddress=(customer.addresses||[]).find(address=>address.id===body.deliveryAddressId);
+   if(!savedAddress)throw new OrderError('Este endereço não pertence ao cliente selecionado.',404);
+   if(body.deliveryAddressVersion!==savedAddress.version)throw new OrderError('O endereço mudou. Reabra a entrega e selecione a versão atual.',409);
+   candidate.recipient=savedAddress.recipient;candidate.recipientPhone=savedAddress.recipientPhone;
+   candidate.address=formatAddress(savedAddress);candidate.city=savedAddress.city;
+  }
  }
 
  if(source==='manual'&&candidate.scheduleMode==='now'){candidate.date=orderOptions.localDate();candidate.period=Number(orderOptions.localTime().slice(0,2))<12?'Manhã':'Tarde';candidate.timeSlot='';}
@@ -50,7 +62,7 @@ async function createOrder(body,source){
  let amount;try{amount=total(data.items,catalog,data.fulfillment,shippingFee)}catch{throw new OrderError('Produto indisponível.',400)}
  const now=new Date().toISOString();
  const items=data.items.map(item=>{const p=catalog.find(p=>p.id===item.id);return {...item,name:p.name,unitPrice:p.price}});
- const order={...data,...(source==='manual'&&body.customerId?{customerId:body.customerId}:{}),customer:data.customer||'Consumidor final',recipient:data.recipient||data.customer||'Consumidor final',customerIdentified:!!(data.customer||data.phone),items,id:randomUUID(),createdAt:now,version:0,source,status:'Aguardando pagamento',paymentStatus:'pending',shippingFee,total:amount,checklist:{arrangement:false,card:false,packaging:false},history:[{at:now,actor:source==='site'?'Cliente pelo site':'Administrador',type:'created',description:'Pedido registrado. Aguardando confirmação de recebimento.'}]};
+ const order={...data,...(savedAddress?{deliveryAddress:Object.fromEntries(Object.entries(savedAddress).filter(([key])=>key!=='history'))}:{}),...(source==='manual'&&body.customerId?{customerId:body.customerId}:{}),customer:data.customer||'Consumidor final',recipient:data.recipient||data.customer||'Consumidor final',customerIdentified:!!(data.customer||data.phone),items,id:randomUUID(),createdAt:now,version:0,source,status:'Aguardando pagamento',paymentStatus:'pending',shippingFee,total:amount,checklist:{arrangement:false,card:false,packaging:false},history:[{at:now,actor:source==='site'?'Cliente pelo site':'Administrador',type:'created',description:'Pedido registrado. Aguardando confirmação de recebimento.'}]};
  await store.insert(order);return order;
 }
 app.post('/api/orders',async(req,res,next)=>{try{const order=await createOrder(req.body,'site');res.status(201).json({id:order.id,total:order.total,shippingFee:order.shippingFee,paymentStatus:'pending',paymentAvailable:false,mode:demo?'demo':'sqlserver'})}catch(e){next(e)}});
@@ -59,6 +71,19 @@ app.use('/api/admin',(req,res,next)=>{
  if(!expected||Buffer.byteLength(given)!==Buffer.byteLength(expected)||!timingSafeEqual(Buffer.from(given),Buffer.from(expected)))return res.status(401).json({error:'Acesso não autorizado'});
  next();
 });
+app.get('/api/admin/cep/:cep',async(req,res,next)=>{try{res.json(await lookupCep(req.params.cep))}catch(error){next(error)}});
+app.get('/api/admin/customers/:id/addresses',async(req,res,next)=>{try{
+ if(!z.uuid().safeParse(req.params.id).success)throw new OrderError('Cliente inválido.',400);
+ const customer=await customers.get(req.params.id);if(!customer)throw new OrderError('Cliente não encontrado.',404);res.json(customer.addresses||[]);
+}catch(error){next(error)}});
+app.post('/api/admin/customers/:id/addresses',async(req,res,next)=>{try{
+ if(!z.uuid().safeParse(req.params.id).success)throw new OrderError('Cliente inválido.',400);
+ res.status(201).json(await customers.saveAddress(req.params.id,req.body));
+}catch(error){next(error)}});
+app.patch('/api/admin/customers/:id/addresses/:addressId',async(req,res,next)=>{try{
+ if(!z.uuid().safeParse(req.params.id).success||!z.uuid().safeParse(req.params.addressId).success)throw new OrderError('Cliente ou endereço inválido.',400);
+ res.json(await customers.saveAddress(req.params.id,req.body,req.params.addressId));
+}catch(error){next(error)}});
 app.get('/api/admin/customers',async(req,res,next)=>{try{
  const query=typeof req.query.q==='string'?req.query.q.trim():'';
  if(query.length>120)throw new OrderError('Pesquise com até 120 caracteres.',400);

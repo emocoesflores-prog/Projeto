@@ -19,3 +19,15 @@ Cadastros e telefones abaixo são fictícios e foram criados apenas para valida�
 ![Busca de cliente antes da modalidade no PDV](pdv-clientes.png)
 
 ![Cadastro separado com nome e WhatsApp obrigatórios](cadastro-cliente.png)
+
+## Entrega e histórico de endereços · versão 1.4
+
+Dados fictícios em demonstração. O preenchimento por CEP foi validado com respostas simuladas do ViaCEP; a consulta real precisa ser conferida no computador da loja.
+
+![Cadastro com máscara de WhatsApp](telefone-mascara.png)
+
+![Popup com destinatário, telefone e endereço completo](entrega-popup.png)
+
+![Vários endereços vinculados ao mesmo cliente](enderecos-salvos.png)
+
+![Histórico preservado com valores anteriores e atuais](historico-endereco.png)

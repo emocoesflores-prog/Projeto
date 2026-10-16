@@ -4,14 +4,20 @@ process.env.DATA_MODE='demo';process.env.ADMIN_TOKEN='operations-test-key';
 const app=require('../server');
 const {applyMutation,normalizeOrder}=require('../order-domain');
 const data={customer:'Cliente Teste',phone:'11999999999',recipient:'Destinatária Teste',fulfillment:'delivery',city:'Mauá',address:'Rua de Teste, 100, Centro',date:'2099-01-01',period:'Tarde',paymentMethod:'pix',message:'Feliz aniversário!',anonymous:true,occasion:'Aniversário',flowerNotes:'Rosas claras',items:[{id:1,quantity:2,note:'Embalagem rosa'}]};
+let fixtureNumber=0;
 async function session(run){const server=app.listen(0);const base=`http://127.0.0.1:${server.address().port}`;const headers={Authorization:'Bearer operations-test-key','Content-Type':'application/json'};async function request(path,body,method='POST',authorized=true){const r=await fetch(base+path,{method,headers:authorized?headers:{'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,body:await r.json()}}
- try{await run(request)}finally{await new Promise(r=>server.close(r))}}
-test('Pedido manual exige autorização, fixa preços e não aceita pagamento forjado',()=>session(async request=>{
+ async function create(body=data){
+ const customer=await request('/api/admin/customers',{name:body.customer,phone:'1190000'+String(++fixtureNumber).padStart(4,'0')});assert.equal(customer.status,201);
+ const address=await request('/api/admin/customers/'+customer.body.id+'/addresses',{zipCode:'09370-670',street:'Rua de Teste',number:'100',neighborhood:'Centro',city:'Mauá',state:'SP',recipient:body.recipient,recipientPhone:'11999999999'});assert.equal(address.status,201);
+ return request('/api/admin/orders',{...body,customerId:customer.body.id,deliveryAddressId:address.body.id,deliveryAddressVersion:address.body.version});
+ }
+ try{await run(request,create)}finally{await new Promise(r=>server.close(r))}}
+test('Pedido manual exige autorização, fixa preços e não aceita pagamento forjado',()=>session(async(request,create)=>{
  assert.equal((await request('/api/admin/orders',data,'POST',false)).status,401);
- const r=await request('/api/admin/orders',{...data,paymentStatus:'paid',status:'Entregue',items:[{...data.items[0],unitPrice:1,name:'Preço forjado'}]});assert.equal(r.status,201);assert.equal(r.body.paymentStatus,'pending');assert.equal(r.body.status,'Aguardando pagamento');assert.equal(r.body.items[0].unitPrice,14900);assert.equal(r.body.items[0].name,'Buquê Aurora');assert.equal(r.body.items[0].note,'Embalagem rosa');assert.equal(r.body.history.length,1);
+ const r=await create({...data,paymentStatus:'paid',status:'Entregue',items:[{...data.items[0],unitPrice:1,name:'Preço forjado'}]});assert.equal(r.status,201);assert.equal(r.body.paymentStatus,'pending');assert.equal(r.body.status,'Aguardando pagamento');assert.equal(r.body.items[0].unitPrice,14900);assert.equal(r.body.items[0].name,'Buquê Aurora');assert.equal(r.body.items[0].note,'Embalagem rosa');assert.equal(r.body.history.length,1);
 }));
-test('Entrega: recebimento, conferência floral, responsável e histórico',()=>session(async request=>{
- let o=(await request('/api/admin/orders',data)).body;
+test('Entrega: recebimento, conferência floral, responsável e histórico',()=>session(async(request,create)=>{
+ let o=(await create(data)).body;
  const patch=body=>request('/api/admin/orders/'+o.id,{...body,version:o.version},'PATCH');
  assert.equal((await patch({action:'status',status:'Em preparação'})).status,400);
  assert.equal((await patch({action:'payment',confirmed:false,reference:'comprovante'})).status,400);
@@ -35,7 +41,7 @@ test('Entrega: recebimento, conferência floral, responsável e histórico',()=>
  assert.equal(o.status,'Entregue');assert.ok(o.history.length>=9);assert.equal(o.items[0].unitPrice,14900);
  assert.equal((await patch({action:'status',status:'Cancelado',reason:'Não deve alterar concluído'})).status,409);
 }));
-test('Retirada segue fluxo próprio; edição preserva preço e modalidade',()=>session(async request=>{
+test('Retirada segue fluxo próprio; edição preserva preço e modalidade',()=>session(async(request,create)=>{
  let o=(await request('/api/admin/orders',{...data,fulfillment:'pickup',city:undefined,address:undefined,message:''})).body;
  const patch=body=>request('/api/admin/orders/'+o.id,{...body,version:o.version},'PATCH');
  const details={...data,fulfillment:'pickup',city:undefined,address:undefined,message:'Cartão atualizado',recipient:'Destinatária Atualizada'};delete details.items;delete details.paymentMethod;
@@ -49,8 +55,8 @@ test('Retirada segue fluxo próprio; edição preserva preço e modalidade',()=>
  o=(await patch({action:'status',status:'Esperando retirada'})).body;
  o=(await patch({action:'status',status:'Retirado'})).body;assert.equal(o.status,'Retirado');
 }));
-test('Cancelamento exige motivo e sinaliza estorno sem executar devolução',()=>session(async request=>{
- let o=(await request('/api/admin/orders',data)).body;
+test('Cancelamento exige motivo e sinaliza estorno sem executar devolução',()=>session(async(request,create)=>{
+ let o=(await create(data)).body;
  const patch=body=>request('/api/admin/orders/'+o.id,{...body,version:o.version},'PATCH');
  assert.equal((await patch({action:'status',status:'Cancelado'})).status,400);
  o=(await patch({action:'payment',confirmed:true,reference:'Pix recebido xyz'})).body;

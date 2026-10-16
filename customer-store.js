@@ -3,11 +3,8 @@ const { randomUUID } = require('node:crypto');
 const sql = require('mssql');
 const { OrderError } = require('./order-domain');
 const { localDate } = require('./public/order-options');
-function normalizePhone(value) {
-  let digits = value.replace(/\D/g, '');
-  if (digits.length === 10 || digits.length === 11) digits = '55' + digits;
-  return /^55[1-9]\d{9,10}$/.test(digits) ? digits : null;
-}
+const {normalizePhone}=require('./contact');
+const {saveAddress}=require('./address-domain');
 const optionalText = max => z.string().trim().max(max).default('');
 const date = z.string().refine(value => {
   if (!value) return true;
@@ -46,6 +43,18 @@ function createCustomerStore({ demo, getPool }) {
       if (demo) { const customer = customers.find(customer => customer.id === id); return customer ? structuredClone(customer) : null; }
       const result = await getPool().request().input('id', sql.UniqueIdentifier, id).query('SELECT * FROM dbo.Customers WHERE id=@id');
       return result.recordset[0] ? decode(result.recordset[0]) : null;
+    },
+    async saveAddress(customerId,body,addressId=null) {
+      function update(customer){if(!customer)throw new OrderError('Cliente não encontrado.',404);try{return saveAddress(customer,body,addressId)}catch(error){throw new OrderError(error.message,error.status||400)}}
+      if(demo){const index=customers.findIndex(customer=>customer.id===customerId);const result=update(index>=0?customers[index]:null);customers[index].addresses=result.addresses;return structuredClone(result.address)}
+      const tx=new sql.Transaction(getPool());await tx.begin();
+      try{
+        const response=await new sql.Request(tx).input('id',sql.UniqueIdentifier,customerId).query('SELECT * FROM dbo.Customers WITH(UPDLOCK,HOLDLOCK) WHERE id=@id');
+        const customer=response.recordset[0]?decode(response.recordset[0]):null;
+        const result=update(customer);
+        await new sql.Request(tx).input('id',sql.UniqueIdentifier,customerId).input('payload',sql.NVarChar(sql.MAX),JSON.stringify({...customer,addresses:result.addresses})).query('UPDATE dbo.Customers SET payload=@payload WHERE id=@id');
+        await tx.commit();return result.address;
+      }catch(error){try{await tx.rollback()}catch{}throw error}
     },
     async insert(body) {
       const data = parseCustomer(body);

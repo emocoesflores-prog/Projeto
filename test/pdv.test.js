@@ -16,7 +16,9 @@ test('PDV: retirada e entrega exigem contato, mas apenas entrega cobra frete',()
  for(const mode of ['pickup','delivery'])assert.equal((await request('/api/admin/orders',{...sale,fulfillment:mode})).status,400);
  const pickup=await request('/api/admin/orders',{...sale,...customer,fulfillment:'pickup'});assert.equal(pickup.status,201);assert.equal(pickup.body.shippingFee,0);
  assert.equal((await request('/api/admin/orders',{...sale,...customer,fulfillment:'delivery'})).status,400);
- const delivery=await request('/api/admin/orders',{...sale,...customer,fulfillment:'delivery',city:'Mauá',address:'Rua Havana, 95, Parque das Américas'});assert.equal(delivery.status,201);assert.equal(delivery.body.shippingFee,2000);assert.equal(delivery.body.total,16900);
+ const client=(await request('/api/admin/customers',{name:'Cliente PDV Entrega',phone:'11988887777'})).body;
+ const saved=(await request('/api/admin/customers/'+client.id+'/addresses',{zipCode:'09370-670',street:'Rua Havana',number:'95',neighborhood:'Parque das Américas',city:'Mauá',state:'SP',recipient:'Destinatária PDV',recipientPhone:'11999999999'})).body;
+ const delivery=await request('/api/admin/orders',{...sale,...customer,fulfillment:'delivery',customerId:client.id,deliveryAddressId:saved.id,deliveryAddressVersion:saved.version});assert.equal(delivery.status,201);assert.equal(delivery.body.shippingFee,2000);assert.equal(delivery.body.total,16900);
 }));
 test('Agendamento do PDV exige data e faixa válida e conserva o período escolhido',()=>session(async request=>{
  const scheduled={...sale,scheduleMode:'scheduled',date:'2099-01-01',timeSlot:'13:40 - 15:20',period:'Tarde'};
