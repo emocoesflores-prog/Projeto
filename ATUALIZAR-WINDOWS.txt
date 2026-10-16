@@ -1,4 +1,4 @@
-ATUALIZAÇÃO — ATELIÊ DE PEDIDOS EMOÇÕES FLORES
+ATUALIZAÇÃO 1.2 — PDV EMOÇÕES FLORES
 
 Você já tem o sistema funcionando. Não é necessário criar outro banco.
 
@@ -24,6 +24,11 @@ CONFIRA A PERSISTÊNCIA
 Crie um pedido de teste com dados fictícios, confira-o no painel, reinicie o servidor e veja se ele continua lá. Você também pode registrar uma alteração nas observações e conferir o histórico após o reinício. Não registre pagamentos reais como teste; registro de recebimento é manual e não realiza cobrança ou estorno.
 
 PRINCIPAIS NOVIDADES
+- Novo pedido abre o PDV: catálogo à esquerda e venda à direita.
+- Modalidade padrão Venda na Loja; também Retirada e Entrega.
+- Pedido para agora selecionado automaticamente; agendamento de dia/faixa em janela separada.
+- Venda na loja permite consumidor final sem identificação; retirada/entrega exigem contatos.
+- Venda na loja e retirada sem frete; entrega usa a taxa configurada.
 - Lista/cartões e detalhes do pedido na mesma tela.
 - Cadastro manual, filtros por etapa/modalidade/data e busca.
 - Ocasião, orientações do arranjo, substituição e cartão anônimo.

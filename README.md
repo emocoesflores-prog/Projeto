@@ -47,6 +47,20 @@ Esta atualização da gestão de pedidos **não altera as tabelas e não exige r
 
 O proprietário confirmou a conexão da primeira versão com seu SQL Server local. Os novos fluxos desta atualização foram testados em demonstração neste ambiente; a persistência dessas novas operações ainda deve ser conferida na máquina do proprietário. O SQL Server local não é acessível automaticamente pela nuvem. Não exponha a porta do banco à internet.
 
+## PDV · Novo pedido
+
+O botão **Novo pedido** abre uma tela de PDV com catálogo à esquerda e resumo da venda à direita. Há busca por nome, categoria ou código do produto, categorias, adição rápida, quantidades, observação por item e totais calculados no servidor.
+
+Os três primeiros campos do resumo são:
+
+1. **Modalidade:** Venda na Loja (padrão), Retirada, Entrega.
+2. **Cliente:** consumidor final opcional em venda na loja; nome, telefone e destinatário obrigatórios para retirada/entrega. A busca reutiliza contatos dos pedidos carregados, sem CRM independente.
+3. **Atendimento:** Pedido para agora (padrão), Realizar agendamento.
+
+**Pedido para agora** não reserva hora e recebe data/período do servidor no fuso de São Paulo. **Realizar agendamento** abre uma janela para escolher dia e faixa; Cancelar/fechar preserva a escolha anterior e a ação “É um pedido para agora?” remove o agendamento. O seletor oferece os próximos 90 dias. As faixas iniciais, seguindo as referências fornecidas, são 09:10–10:50, 10:50–12:30, 13:40–15:20, 15:20–17:00 e 17:00–18:40, compartilhadas em `public/order-options.js`. Não se presume fechamento aos domingos/feriados; configure regras reais de funcionamento numa evolução do calendário. Faixas já encerradas são bloqueadas em São Paulo. Uma faixa em andamento ainda pode ser selecionada: o sistema não verifica capacidade ou prazo de preparo.
+
+Venda na loja e retirada não cobram frete. Entrega exige endereço e cidade atendida, cobrando a taxa configurada. Ocasião, mensagem, substituição e cuidados com o presente ficam nos campos expansíveis. O botão **Registrar pedido** cria um pedido aguardando pagamento, sem cobrar ou confirmar recebimento. O rascunho fica somente em memória; fechar pede confirmação quando há dados, e um novo PDV começa com os padrões iniciais. Não há controle financeiro de caixa, leitor de código de barras, suspensão de vendas, descontos nem produtos personalizados nesta versão.
+
 ## Ateliê de pedidos
 
 Inspirado nas referências de operação enviadas pelo proprietário, adaptado à produção floral:
@@ -73,10 +87,10 @@ Um pedido começa **Aguardando pagamento**. No painel, o operador pode registrar
 
 Após o registro:
 
-- **Entrega:** Agendado → Em preparação → Pronto → Saiu para entrega → Entregue.
-- **Retirada:** Agendado → Em preparação → Pronto → Esperando retirada → Retirado.
+- **Entrega agendada:** Agendado → Em preparação → Pronto → Saiu para entrega → Entregue.
+- **Retirada agendada:** Agendado → Em preparação → Pronto → Esperando retirada → Retirado.
 
-Para marcar como pronto, confira arranjo e embalagem; o cartão precisa ser conferido quando há mensagem. Para despachar, informe o entregador. Etapas não podem ser puladas. Alterar destinatário/assinatura/mensagem reinicia a conferência do cartão; mudar orientações do arranjo reinicia a conferência floral. Se estava pronto, o pedido volta a Em preparação para ser conferido novamente. Pedidos concluídos não podem ser reabertos nesta versão.
+Para marcar como pronto, confira arranjo e embalagem; o cartão precisa ser conferido quando há mensagem. Para despachar, informe o entregador. Venda na loja segue Agendado → Em preparação → Pronto → Concluído na loja. Para pedidos **para agora**, a primeira etapa após registrar recebimento é **Recebido**, em vez de Agendado. Etapas não podem ser puladas. Alterar destinatário/assinatura/mensagem reinicia a conferência do cartão; mudar orientações do arranjo reinicia a conferência floral. Se estava pronto, o pedido volta a Em preparação para ser conferido novamente. Pedidos concluídos não podem ser reabertos nesta versão.
 
 O cancelamento exige motivo. Se houver recebimento registrado, o sistema sinaliza a necessidade de verificar estorno, mas **não devolve dinheiro nem marca o pagamento como estornado**. O operador resolve a devolução fora do sistema.
 
@@ -84,7 +98,7 @@ O cancelamento exige motivo. Se houver recebimento registrado, o sistema sinaliz
 
 A taxa única vale para as três cidades e pode ser alterada em **Configurações** entre R$ 0 e R$ 1.000. O novo valor é aplicado apenas aos novos pedidos, mantendo o frete original dos anteriores. Em SQL Server, a configuração persiste ao reiniciar; em demo, volta a R$ 20. O catálogo e suas ilustrações são exemplos; edição de catálogo e controle de estoque ainda não existem.
 
-A consulta atual carrega até **200 pedidos recentes** no SQL Server. As abas, clientes, agenda, indicadores e CSV usam esse conjunto, indicado na tela; não são relatórios históricos completos. Filtro de data usa o agendamento, não a data de criação. O histórico da aba corresponde a pedidos encerrados presentes nesse conjunto. O agendamento é por dia/período; não reserva capacidade, não valida feriados e não define uma hora exata. Não há controle de estoque, reembolso integrado, fiscal, marketing nem roteirização automática.
+A consulta atual carrega até **200 pedidos recentes** no SQL Server. As abas, clientes, agenda, indicadores e CSV usam esse conjunto, indicado na tela; não são relatórios históricos completos. Filtro de data usa o agendamento, não a data de criação. O histórico da aba corresponde a pedidos encerrados presentes nesse conjunto. O PDV agenda por dia/faixa de horário; a loja pública mantém dia/período. Não há reserva de capacidade nem validação de feriados. Não há controle de estoque, reembolso integrado, fiscal, marketing nem roteirização automática.
 
 Para vender publicamente ainda é necessário configurar HTTPS, acesso ao servidor web, disponibilidade, backup, privacidade/LGPD, catálogo real, regras de capacidade e autenticação por usuários com permissões. Iniciar localmente ou enviar ao GitHub não publica o site na internet.
 
@@ -97,3 +111,5 @@ npm test
 Os testes exercitam autorização administrativa, preço imposto pelo servidor, cidades, frete/retirada, confirmação manual, bloqueio de pagamento forjado e duplicado, concorrência de versões, conferência do arranjo/cartão, responsáveis, fluxos distintos de entrega e retirada, cancelamento com estorno pendente, compatibilidade de pedidos antigos, agrupamento de clientes e datas em São Paulo.
 
 Também foi validado em Chromium: cadastro/edição manual, confirmação de recebimento, checklist, preparo, retirada, cartão anônimo sem notas internas, abas, mudança de layout, acesso móvel e logout. Os testes de aplicação usam o modo demo; não substituem a validação de persistência no SQL Server instalado na máquina do proprietário.
+
+A versão 1.2 também foi validada com 15 testes automatizados e fluxo Chromium do PDV: padrões iniciais, consumidor final, venda na loja, retirada agendada, entrega para agora, frete, cancelamento do diálogo de agendamento, retorno para agora, busca/seleção de cliente e produto, preservação na edição, descarte de rascunho e layout móvel. Os novos campos usam o JSON existente, sem mudança nas tabelas SQL.

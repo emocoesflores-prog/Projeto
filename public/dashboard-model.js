@@ -5,7 +5,7 @@
     const active=orders.filter(o=>o.status!=='Cancelado');
     return {total:orders.length,pending:active.filter(o=>o.paymentStatus==='pending').length,today:active.filter(o=>o.date===today).length,cancelled:orders.length-active.length,days:nextDays(today).map(date=>({date,orders:active.filter(o=>o.date===date)}))};
   }
-  function customers(orders) {const map=new Map();for(const o of orders){const key=o.phone.replace(/\D/g,'');const c=map.get(key)||{name:o.customer,phone:o.phone,count:0};c.count++;map.set(key,c)}return [...map.values()]}
+  function customers(orders) {const map=new Map();for(const o of orders){if(!o.phone)continue;const key=o.phone.replace(/\D/g,'');const c=map.get(key)||{name:o.customer,phone:o.phone,count:0};c.count++;map.set(key,c)}return [...map.values()]}
   const model={localDate,nextDays,summarize,customers};
   if(typeof module==='object')module.exports=model;else root.dashboardModel=model;
 })(globalThis);
