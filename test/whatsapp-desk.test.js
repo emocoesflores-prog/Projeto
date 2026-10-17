@@ -49,3 +49,31 @@ test('Rotas do atendimento validam dados, anexos, LID e habilitação explícita
   }finally{await new Promise(r=>server.close(r));await fs.rm(dir,{recursive:true,force:true});}
 });
 test('Download de anexo não pode recuperar mensagem de outra conversa',async()=>{const client=new EventEmitter();client.initialize=async()=>{};client.getMessageById=async()=>({from:'5511888888888@c.us',to:'5511777777777@c.us',downloadMedia:async()=>{throw Error('must not download')}});const service=createWhatsAppService({clientFactory:()=>client});await service.connect();client.emit('ready');await assert.rejects(service.media(id,'private-message'),{status:404});});
+test('Recupera integração após falha de inicialização sem abrir segunda sessão; antigas e novas ficam acessíveis',async()=>{
+  const models=[{id:{_serialized:id},formattedTitle:'Contato antigo',t:1,msgs:{getModelsArray:()=>[{body:'Mensagem antiga',t:1}]}}];
+  const context=vm.createContext({window:{require:name=>name==='WAWebSocketModel'?{Socket:{state:'CONNECTED'}}:{Chat:{getModelsArray:()=>models}}}});
+  const client=new EventEmitter();let factories=0,destroys=0;
+  client.pupPage={isClosed:()=>false,evaluate:async fn=>JSON.parse(JSON.stringify(vm.runInContext('('+fn.toString()+')()',context)??null))};
+  client.pupBrowser={isConnected:()=>true};client.initialize=async()=>{throw Error('startup hook failed after login')};client.destroy=async()=>{destroys++};client.logout=async()=>{};
+  client.getChats=async()=>{throw Error('must use isolated reader')};client.sendMessage=async()=>({id:{_serialized:'sent'}});
+  const service=createWhatsAppService({clientFactory:()=>{factories++;return client}});
+  await service.connect();await new Promise(setImmediate);assert.equal(service.status().status,'syncing');assert.equal(service.status().canConnect,false);
+  await service.connect();assert.equal(factories,1);assert.equal(destroys,0);
+  const status=await service.refreshStatus();assert.equal(status.status,'ready');assert.equal(status.canConnect,false);assert.equal(typeof context.window.WWebJS.sendMessage,'function');
+  assert.equal((await service.chats())[0].preview,'Mensagem antiga');models.push({id:{_serialized:lid},formattedTitle:'Nova conversa',t:2,msgs:{getModelsArray:()=>[{body:'Oi agora',t:2}]}});
+  const updated=await service.chats();assert.equal(updated.length,2);assert.equal(updated[0].preview,'Oi agora');assert.equal((await service.send(id,'Resposta pelo painel')).id,'sent');
+  await service.disconnect();assert.equal(service.status().canConnect,true);
+});
+test('Página aberta sem sessão CONNECTED não é declarada pronta',async()=>{
+  const client=new EventEmitter();client.initialize=async()=>{throw Error('hook failed')};client.pupPage={isClosed:()=>false,evaluate:async()=>({connected:false,readable:true,bridgeReady:true})};
+  const service=createWhatsAppService({clientFactory:()=>client});await service.connect();await new Promise(setImmediate);const status=await service.refreshStatus();assert.notEqual(status.status,'ready');assert.equal(status.canConnect,false);
+});
+test('Reconexões simultâneas durante inicialização criam somente um cliente',async()=>{
+  let count=0;const client=new EventEmitter();client.initialize=()=>new Promise(()=>{});client.destroy=async()=>{};client.logout=async()=>{};
+  const service=createWhatsAppService({clientFactory:()=>{count++;return client}});await Promise.all([service.connect(),service.connect(),service.connect()]);assert.equal(count,1);assert.equal(service.status().canConnect,false);await service.disconnect();assert.equal(service.status().canConnect,true);
+});
+test('Configuração antiga de diagnóstico não reabre janela: navegador é oculto por padrão',async()=>{
+  const oldHeadless=process.env.WHATSAPP_HEADLESS,oldShow=process.env.WHATSAPP_SHOW_BROWSER;let options;
+  try{process.env.WHATSAPP_HEADLESS='false';delete process.env.WHATSAPP_SHOW_BROWSER;const client=new EventEmitter();client.initialize=async()=>{};client.destroy=async()=>{};client.logout=async()=>{};const service=createWhatsAppService({clientFactory:value=>{options=value;return client}});await service.connect();assert.equal(options.puppeteer.headless,true);await service.disconnect();}
+  finally{if(oldHeadless===undefined)delete process.env.WHATSAPP_HEADLESS;else process.env.WHATSAPP_HEADLESS=oldHeadless;if(oldShow===undefined)delete process.env.WHATSAPP_SHOW_BROWSER;else process.env.WHATSAPP_SHOW_BROWSER=oldShow;}
+});

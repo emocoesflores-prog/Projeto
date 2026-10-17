@@ -3,7 +3,7 @@ const { z } = require('zod');
 function whatsappRoutes(service, desk = require('./whatsapp-desk-store').createDeskStore(), florzinha = require('./florzinha').createFlorzinha()) {
   const router = express.Router();
   router.use((req,res,next) => { res.set('Cache-Control','no-store'); next(); });
-  router.get('/status', (req,res) => res.json({ ...service.status(), aiConfigured: florzinha.configured() }));
+  router.get('/status', async (req,res,next) => { try { const state = service.refreshStatus ? await service.refreshStatus() : service.status(); res.json({ ...state, aiConfigured: florzinha.configured() }); } catch(e) { next(e); } });
   router.post('/connect', async (req,res,next) => { try { await service.connect(); res.status(202).json(service.status()); } catch(e) { next(e); } });
   router.post('/disconnect', async (req,res,next) => { try { await service.disconnect(); res.json(service.status()); } catch(e) { next(e); } });
   router.get('/chats', async (req,res,next) => { try { const metadata = await desk.all(); res.json((await service.chats()).map(chat => ({ ...chat, desk: metadata[chat.id] || {} }))); } catch(e) { next(e); } });

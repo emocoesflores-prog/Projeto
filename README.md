@@ -176,10 +176,10 @@ Neste computador Windows, o usuário conseguiu conectar usando o Chrome instalad
 
 ```env
 WHATSAPP_BROWSER_PATH="C:\Program Files\Google\Chrome\Application\chrome.exe"
-WHATSAPP_HEADLESS=true
+WHATSAPP_SHOW_BROWSER=false
 ```
 
-O valor `false` em `WHATSAPP_HEADLESS` abre a janela do navegador para diagnóstico; `true` mantém o atendimento no painel, sem janela visível. No painel, abra **Conexão → Conectar WhatsApp**. Se for solicitado, escaneie o QR em **WhatsApp no celular → Aparelhos conectados**. Uma sessão já salva pode reconectar sem novo QR. A aplicação usa a página atual do WhatsApp, sem HTML antigo em cache e sem se identificar como Chrome 101. Não abra manualmente outro Chrome com o perfil do sistema.
+O navegador fica oculto por padrão. `WHATSAPP_SHOW_BROWSER=true` abre uma janela somente para diagnóstico; `false` mantém o atendimento inteiramente no painel. A configuração antiga `WHATSAPP_HEADLESS` não é mais usada, para não reabrir janelas deixadas pelo diagnóstico anterior. No painel, abra **Conexão → Conectar WhatsApp**. Se for solicitado, escaneie o QR em **WhatsApp no celular → Aparelhos conectados**. Uma sessão já salva pode reconectar sem novo QR. A aplicação usa a página atual do WhatsApp, sem HTML antigo em cache e sem se identificar como Chrome 101. Não abra manualmente outro Chrome com o perfil do sistema.
 
 A sessão em `.wwebjs_auth` permite acesso à conta. Proteja-a, não a envie por chat e não a inclua em downloads públicos. Sair do painel não desconecta o aparelho; **Desconectar aparelho** encerra o vínculo. A aplicação não solicita tokens de WhatsApp em chat. Uma falha em grupos na serialização da biblioteca pode impedir `getChats`; nesse caso, a integração lê resumos das conversas individuais diretamente na mesma página autenticada. Essa compatibilidade depende de APIs internas do WhatsApp e pode mudar.
 
@@ -205,3 +205,9 @@ A biblioteca whatsapp-web.js é uma integração não oficial, sujeita a altera�
 A área **Pedidos** segue o formato de operação da referência: linhas compactas em duas colunas, indicador de modalidade, horário e tempo desde a criação, faixas de status coloridas, filtros no topo e detalhe fixo à direita. O primeiro pedido é selecionado automaticamente. **Ajustar layout** alterna entre duas colunas e lista; em telas menores, a interface se reorganiza para manter a leitura. **Gestão de entregas** abre a agenda existente, sem inventar um módulo de roteirização. As etapas, confirmação manual de recebimento, conferências e validações do servidor foram preservadas.
 
 ![Pedidos em duas colunas, com dados fictícios de teste](docs/pedidos-compactos.png)
+
+### Sessão conectada, mas integração incompleta
+
+Se a biblioteca falhar após o WhatsApp estar autenticado, a API verifica a conexão do socket, a leitura da coleção de conversas e as funções de integração. Quando necessário, reinstala na página as funções auxiliares da própria biblioteca e só marca pronto após verificar acesso às conversas. A lista é lida sem passar pela serialização global de grupos. A verificação também é repetida pelo painel, permitindo recuperar uma sessão aberta sem criar outro navegador.
+
+O botão Conectar é bloqueado durante inicialização, QR pendente, sincronização e sessão pronta. O servidor também impede criar um segundo cliente nessa situação. O estado pode mostrar “Sessão vinculada · sincronizando” enquanto a ponte de integração ainda não está pronta; isso não significa que leitura/envio já foram validados. O navegador oculto precisa continuar rodando no servidor para manter o atendimento no painel. Esses fluxos foram testados com sessão e conversas simuladas; a recuperação efetiva da conta do proprietário ainda precisa ser conferida no Windows.

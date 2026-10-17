@@ -1,5 +1,5 @@
 const WhatsAppDesk = (() => {
-  let config, timer, visible=false, selected=null, epoch=0, polling=false, ready=false, sending=false, allChats=[], filter='all', suggestionId=null, aiConfigured=false, generating=false, lastMessages='';
+  let config, timer, visible=false, selected=null, epoch=0, polling=false, ready=false, connecting=false, connectionAllowed=false, sending=false, allChats=[], filter='all', suggestionId=null, aiConfigured=false, generating=false, lastMessages='';
   const drafts=new Map(), el=id=>document.getElementById(id);
   const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
   const initials=name=>name.split(/\s+/).slice(0,2).map(s=>s[0]).join('').toUpperCase();
@@ -14,7 +14,7 @@ const WhatsAppDesk = (() => {
     ready=value;const available=!!selected&&ready&&!sending;
     for(const id of ['wa-body','wa-submit','wa-attach','wa-templates','wa-favorite','wa-stage','wa-owner','wa-notes','wa-save-notes','wa-order','wa-create-order','wa-ai-enabled'])el(id).disabled=!available;
     el('wa-generate').disabled=generating||!available||!selected?.desk?.aiEnabled||!aiConfigured;
-    el('wa-new').disabled=!ready;el('wa-connect').disabled=ready;
+    el('wa-new').disabled=!ready;el('wa-connect').disabled=connecting||!connectionAllowed;
   }
   function renderQueue(){
     const query=el('wa-search').value.normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase();
@@ -66,8 +66,8 @@ const WhatsAppDesk = (() => {
   }
   async function poll(){
     if(!visible||polling)return;polling=true;const version=epoch;
-    try{const s=await request('/status');if(version!==epoch)return;aiConfigured=!!s.aiConfigured;
-      const labels={disconnected:'WhatsApp desconectado',starting:'Iniciando conexão…',qr:'Escaneie o QR Code',authenticated:'Autenticado · sincronizando…',ready:'● WhatsApp conectado',error:'Falha na conexão'};
+    try{const s=await request('/status');if(version!==epoch)return;aiConfigured=!!s.aiConfigured;connectionAllowed=s.canConnect??!['starting','qr','authenticated','syncing','ready'].includes(s.status);el('wa-connect').textContent=s.status==='ready'?'WhatsApp conectado':connectionAllowed?'Conectar WhatsApp':'Conexão em andamento';
+      const labels={disconnected:'WhatsApp desconectado',starting:'Iniciando conexão…',qr:'Escaneie o QR Code',authenticated:'Autenticado · sincronizando…',syncing:'Sessão vinculada · sincronizando com o painel…',ready:'● WhatsApp conectado',error:'Falha na conexão'};
       el('wa-status').textContent=s.error||labels[s.status]||s.status;el('wa-qr').hidden=!s.qr;if(s.qr){el('wa-qr').src=s.qr;el('wa-connection').hidden=false;}else el('wa-qr').removeAttribute('src');enabled(s.status==='ready');
       if(ready){try{await chats(version);}catch(e){if(version===epoch)el('wa-chat-status').textContent=e.message;}try{await messages(version);}catch(e){if(version===epoch)el('wa-result').textContent=e.message;}}
       else if(!selected)renderQueue();
@@ -90,7 +90,7 @@ const WhatsAppDesk = (() => {
   return {
     init(options){config=options;
       el('wa-connection-toggle').onclick=()=>{el('wa-connection').hidden=!el('wa-connection').hidden;};
-      for(const action of ['connect','disconnect'])el('wa-'+action).onclick=async()=>{if(action==='disconnect'&&!confirm('Desconectar este aparelho do WhatsApp?'))return;el('wa-status').textContent=action==='connect'?'Iniciando WhatsApp…':'Desconectando…';const button=el('wa-'+action);button.disabled=true;try{await request('/'+action,{method:'POST',body:'{}'});if(action==='disconnect'){selected=null;allChats=[];drafts.clear();lastMessages='';renderQueue();el('wa-messages').replaceChildren();el('wa-body').value='';enabled(false);}clearTimeout(timer);await poll();}catch(e){el('wa-status').textContent=e.message;}finally{button.disabled=action==='connect'&&ready;}};
+      for(const action of ['connect','disconnect'])el('wa-'+action).onclick=async()=>{if(action==='disconnect'&&!confirm('Desconectar este aparelho do WhatsApp?'))return;el('wa-status').textContent=action==='connect'?'Iniciando WhatsApp…':'Desconectando…';const button=el('wa-'+action);if(action==='connect'){connecting=true;connectionAllowed=false;}button.disabled=true;try{await request('/'+action,{method:'POST',body:'{}'});if(action==='disconnect'){selected=null;allChats=[];drafts.clear();lastMessages='';renderQueue();el('wa-messages').replaceChildren();el('wa-body').value='';enabled(false);}clearTimeout(timer);await poll();}catch(e){el('wa-status').textContent=e.message;}finally{if(action==='connect'){connecting=false;enabled(ready);}else button.disabled=false;}};
       el('wa-refresh').onclick=async()=>{try{await chats();await messages();}catch(e){el('wa-chat-status').textContent=e.message;}};
       el('wa-search').oninput=renderQueue;
       for(const button of el('wa-filters').querySelectorAll('button'))button.onclick=()=>{filter=button.dataset.filter;for(const b of el('wa-filters').querySelectorAll('button'))b.classList.toggle('active',b===button);renderQueue();};

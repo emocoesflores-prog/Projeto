@@ -17,3 +17,13 @@ function readChatSummaries() {
   return result;
 }
 module.exports = { readChatSummaries };
+
+function inspectWhatsAppConnection() {
+  try {
+    const socket = window.require('WAWebSocketModel').Socket;
+    const chats = window.require('WAWebCollections').Chat;
+    return { connected: socket.state === 'CONNECTED', readable: typeof chats?.getModelsArray === 'function',
+      bridgeReady: ['getChat','getMessageModel','sendMessage'].every(name => typeof window.WWebJS?.[name] === 'function') };
+  } catch { return { connected: false, readable: false, bridgeReady: false }; }
+}
+module.exports.inspectWhatsAppConnection = inspectWhatsAppConnection;

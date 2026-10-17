@@ -1,35 +1,69 @@
 const path = require('node:path');
 function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeoutMs = 90000, dataPath = path.join(__dirname, '.wwebjs_auth') } = {}) {
-  let client, starting, startupTimer, generation = 0;
+  let client, starting, startupTimer, generation = 0, probing = null;
   let state = { status: 'disconnected', qr: null, error: null };
   const failureMessage = error => {
     const message = String(error?.message || error || '');
-    if (/auth timeout|ready timeout/i.test(message)) return 'O WhatsApp abriu, mas não concluiu a autenticação. Ative WHATSAPP_HEADLESS=false no .env para verificar a janela do navegador.';
+    if (/auth timeout|ready timeout/i.test(message)) return 'O WhatsApp abriu, mas não concluiu a autenticação. Ative WHATSAPP_SHOW_BROWSER=true no .env para verificar a janela do navegador.';
     if (/could not find chrome|executable.*doesn.t exist|browser was not found/i.test(message)) return 'Chrome não encontrado. No terminal do projeto, execute: npx puppeteer browsers install chrome';
     if (/user data directory.*in use|browser is already running|SingletonLock/i.test(message)) return 'A sessão está em uso por outro navegador. Encerre a outra instância deste sistema e tente novamente.';
     if (/ERR_|navigation.*timeout|net::/i.test(message)) return 'Não foi possível acessar o WhatsApp Web. Confira a conexão de internet e o firewall deste computador.';
     return 'Não foi possível iniciar o WhatsApp. Confira o Chrome instalado e se outra instância está usando a sessão.';
   };
+  const browserAlive = () => !!(client?.pupBrowser?.isConnected?.() || (client?.pupPage && !client.pupPage.isClosed?.()));
+  const canConnect = () => !starting && !browserAlive() && !['starting','qr','authenticated','syncing','ready'].includes(state.status);
+  async function refreshStatus() {
+    if (client?.pupPage?.isClosed?.() && state.status !== 'disconnected') { ++generation; starting = null; clearTimeout(startupTimer); state = { status:'disconnected', qr:null, error:'A conexão do WhatsApp foi encerrada.' }; }
+    if (!client?.pupPage || state.status === 'disconnected') return { ...state, canConnect: canConnect() };
+    if (probing) { await probing; return { ...state, canConnect: canConnect() }; }
+    const current = generation, active = client;
+    probing = (async () => {
+      try {
+        const { inspectWhatsAppConnection, readChatSummaries } = require('./whatsapp-compat');
+        const connection = await active.pupPage.evaluate(inspectWhatsAppConnection);
+        if (current !== generation) return;
+        if (connection.connected && connection.readable) {
+          if (!connection.bridgeReady) {
+            await active.pupPage.evaluate(require('whatsapp-web.js/src/util/Injected/Utils').LoadUtils);
+          }
+          const verified = await active.pupPage.evaluate(inspectWhatsAppConnection);
+          const summaries = await active.pupPage.evaluate(readChatSummaries);
+          if (current !== generation) return;
+          if (verified.connected && verified.bridgeReady && Array.isArray(summaries)) {
+            clearTimeout(startupTimer);
+            state = { status:'ready', qr:null, error:null };
+          } else state = { status:'syncing', qr:null, error:'WhatsApp vinculado. Preparando acesso às conversas no painel.' };
+        } else if (state.status === 'ready' && !connection.connected) {
+          state = { status:'syncing', qr:null, error:'Aguardando o WhatsApp restabelecer a conexão.' };
+        }
+      } catch {
+        if (current === generation && browserAlive()) state = { status:'syncing', qr:null, error:'Sessão aberta. A integração ainda não conseguiu acessar as conversas. [WA_BRIDGE_PENDING]' };
+      }
+    })().finally(() => { probing = null; });
+    await probing;
+    return { ...state, canConnect: canConnect() };
+  }
   const requireReady = () => {
     if (state.status !== 'ready' || !client) throw Object.assign(new Error('Conecte o WhatsApp antes de continuar.'), { status: 409 });
     return client;
   };
   return {
-    status: () => ({ ...state }),
+    status: () => ({ ...state, canConnect: canConnect() }),
+    refreshStatus,
     async connect() {
-      if (starting || ['starting', 'ready', 'qr', 'authenticated'].includes(state.status)) return;
+      if (starting || !canConnect()) return;
       clearTimeout(startupTimer);
       const current = ++generation;
       state = { status: 'starting', qr: null, error: null };
       try {
-        if (client) await client.destroy();
+        if (client) { await client.destroy(); client = null; }
         const options = {
           // Do not serve an old cached WhatsApp HTML or impersonate Chrome 101.
           webVersionCache: { type: 'none' },
           userAgent: false,
           authTimeoutMs: 60000,
           puppeteer: {
-            headless: process.env.WHATSAPP_HEADLESS !== 'false',
+            headless: process.env.WHATSAPP_SHOW_BROWSER !== 'true',
             ...(process.env.WHATSAPP_BROWSER_PATH ? { executablePath: process.env.WHATSAPP_BROWSER_PATH } : {})
           }
         };
@@ -43,7 +77,7 @@ function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeout
         startupTimer = setTimeout(() => {
           if (generation !== current || !['starting', 'authenticated'].includes(state.status)) return;
           ++generation; starting = null;
-          state = { status: 'error', qr: null, error: 'A inicialização do WhatsApp demorou demais. Reinicie o servidor; se persistir, defina WHATSAPP_HEADLESS=false no .env para verificar a janela. A sessão salva foi preservada.' };
+          state = { status: 'error', qr: null, error: 'A inicialização do WhatsApp demorou demais. Reinicie o servidor; se persistir, defina WHATSAPP_SHOW_BROWSER=true no .env para verificar a janela. A sessão salva foi preservada.' };
           Promise.resolve().then(() => client.destroy()).catch(() => {});
         }, initializationTimeoutMs);
         startupTimer.unref?.();
@@ -63,7 +97,7 @@ function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeout
           if (generation === current) state = { status: 'disconnected', qr: null, error: 'Conexão encerrada. Conecte novamente.' };
         });
         starting = Promise.resolve(client.initialize()).catch(error => {
-          if (generation === current) { clearTimeout(startupTimer); state = { status: 'error', qr: null, error: failureMessage(error) }; }
+          if (generation === current) { clearTimeout(startupTimer); state = { status: browserAlive() ? 'syncing' : 'error', qr: null, error: browserAlive() ? 'WhatsApp aberto. Recuperando o acesso ao atendimento do painel…' : failureMessage(error) }; }
         }).finally(() => { if (generation === current) starting = null; });
       } catch(error) {
         clearTimeout(startupTimer);
@@ -83,14 +117,13 @@ function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeout
     async chats() {
       const current = requireReady();
       let chats;
-      try {
-        chats = (await current.getChats()).map(c => ({ id: c.id._serialized, name: c.name,
-          unread: c.unreadCount || 0, timestamp: c.timestamp || 0,
-          preview: c.lastMessage?.body || (c.lastMessage?.hasMedia ? '[Anexo]' : ''), archived: !!c.archived }));
-      } catch (error) {
-        if (!current.pupPage) throw error;
-        chats = await current.pupPage.evaluate(require('./whatsapp-compat').readChatSummaries);
-      }
+      const fromLibrary = async () => (await current.getChats()).map(c => ({ id: c.id._serialized, name: c.name,
+        unread: c.unreadCount || 0, timestamp: c.timestamp || 0,
+        preview: c.lastMessage?.body || (c.lastMessage?.hasMedia ? '[Anexo]' : ''), archived: !!c.archived }));
+      if (current.pupPage) {
+        try { chats = await current.pupPage.evaluate(require('./whatsapp-compat').readChatSummaries); }
+        catch { chats = await fromLibrary(); }
+      } else chats = await fromLibrary();
       return chats.filter(c => /^\d{5,20}@(c\.us|lid)$/.test(c.id))
         .sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0,200);
     },

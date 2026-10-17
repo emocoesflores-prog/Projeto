@@ -70,7 +70,7 @@ O catálogo ainda é de exemplo e não tem editor/estoque. A consulta SQL contin
 
 ATENDIMENTO E FLORZINHA
 - Use Node.js 24 e preserve no .env o WHATSAPP_BROWSER_PATH com o caminho do Chrome que já conectou no seu computador.
-- WHATSAPP_HEADLESS=true permite trabalhar pelo painel sem janela extra. false mostra a janela para diagnóstico.
+- O navegador fica oculto por padrão. WHATSAPP_SHOW_BROWSER=true abre janela somente para diagnóstico; use false para atender pelo painel. A antiga configuração WHATSAPP_HEADLESS é ignorada.
 - No painel Atendimento, use Conexão para reconectar a sessão. Ela pode restaurar sem QR Code.
 - Fila com busca, filtros, histórico, respostas rápidas, texto e anexos, notas internas e vínculo manual de pedido.
 - As notas/status/responsáveis ficam em .whatsapp-desk.json, privado no servidor; inclua no backup.
@@ -78,3 +78,6 @@ ATENDIMENTO E FLORZINHA
 - A chave é da API da OpenAI, com faturamento próprio. Não envie a chave por chat e não a salve no Git.
 - Habilite a Florzinha na conversa, gere uma sugestão, revise e use no compositor. Só o botão Enviar manda a resposta ao cliente.
 - Leia os limites e detalhes de configuração no README.md. A recuperação das conversas reais e a IA precisam ser conferidas na sua máquina após atualizar.
+
+ESTADO DA CONEXÃO
+O botão Conectar fica bloqueado enquanto a sessão inicia, aguarda QR, sincroniza ou está conectada. O servidor também impede criar outro cliente. Uma sessão autenticada com erro de integração passa por verificação e tentativa de recuperar a leitura das conversas. Preserve .wwebjs_auth ao atualizar; não precisa apagar o vínculo do celular.
