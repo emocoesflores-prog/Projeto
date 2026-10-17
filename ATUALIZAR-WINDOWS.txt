@@ -81,3 +81,8 @@ ATENDIMENTO E FLORZINHA
 
 ESTADO DA CONEXÃO
 O botão Conectar fica bloqueado enquanto a sessão inicia, aguarda QR, sincroniza ou está conectada. O servidor também impede criar outro cliente. Uma sessão autenticada com erro de integração passa por verificação e tentativa de recuperar a leitura das conversas. Preserve .wwebjs_auth ao atualizar; não precisa apagar o vínculo do celular.
+
+VISUAL WHATSAPP WEB
+A área de atendimento agora usa tema escuro, lista lateral, histórico e caixa de resposta fixa na tela. A conexão fica em um painel recolhível, e as informações/Florzinha abrem no botão de informações do cabeçalho.
+Emojis: botão de rosto ao lado do texto. Anexos: botão +. Microfone: grave, pare, ouça e depois envie. O microfone pede permissão do navegador; localhost e HTTPS são compatíveis. A lupa busca nas mensagens carregadas; Responder cria uma resposta citada de texto. Não há chamadas de voz/vídeo nem catálogo de GIFs integrado.
+Desconectar agora fica desabilitado sem sessão ativa. Preserve seu .env, pasta .wwebjs_auth e arquivo .whatsapp-desk.json; não é necessário parear de novo só para atualizar o visual.

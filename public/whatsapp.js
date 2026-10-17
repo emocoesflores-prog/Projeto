@@ -1,5 +1,5 @@
 const WhatsAppDesk = (() => {
-  let config, timer, visible=false, selected=null, epoch=0, polling=false, ready=false, connecting=false, connectionAllowed=false, sending=false, allChats=[], filter='all', suggestionId=null, aiConfigured=false, generating=false, lastMessages='';
+  let config, timer, visible=false, selected=null, epoch=0, polling=false, ready=false, connecting=false, disconnecting=false, connectionAllowed=false, disconnectionAllowed=false, previousConnectionState=null, sending=false, allChats=[], filter='all', suggestionId=null, aiConfigured=false, generating=false, lastMessages='';
   const drafts=new Map(), el=id=>document.getElementById(id);
   const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
   const initials=name=>name.split(/\s+/).slice(0,2).map(s=>s[0]).join('').toUpperCase();
@@ -14,7 +14,14 @@ const WhatsAppDesk = (() => {
     ready=value;const available=!!selected&&ready&&!sending;
     for(const id of ['wa-body','wa-submit','wa-attach','wa-templates','wa-favorite','wa-stage','wa-owner','wa-notes','wa-save-notes','wa-order','wa-create-order','wa-ai-enabled'])el(id).disabled=!available;
     el('wa-generate').disabled=generating||!available||!selected?.desk?.aiEnabled||!aiConfigured;
-    el('wa-new').disabled=!ready;el('wa-connect').disabled=connecting||!connectionAllowed;
+    el('wa-new').disabled=!ready;el('wa-connect').disabled=connecting||disconnecting||!connectionAllowed;el('wa-disconnect').disabled=connecting||disconnecting||!disconnectionAllowed;WhatsAppTools.enabled(available);
+  }
+  function clearSelection(){
+    selected=null;lastMessages='';WhatsAppTools.reset();el('view-whatsapp').classList.remove('chat-open');
+    el('wa-messages').replaceChildren();el('wa-body').value='';el('wa-suggestion').hidden=true;el('wa-suggestion-text').textContent='';suggestionId=null;
+    for(const id of ['wa-owner','wa-notes'])el(id).value='';
+    el('wa-title').textContent='Selecione uma conversa';el('wa-avatar').textContent='✿';el('wa-contact-avatar').textContent='✿';el('wa-phone').textContent='';el('wa-contact-name').textContent='Informações do contato';el('wa-contact-phone').textContent='';el('wa-timeline').replaceChildren();
+    el('wa-open-order').hidden=true;el('wa-ai-enabled').checked=false;el('wa-order').replaceChildren(node('option','Sem pedido vinculado'));el('wa-result').textContent='';
   }
   function renderQueue(){
     const query=el('wa-search').value.normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase();
@@ -43,7 +50,7 @@ const WhatsAppDesk = (() => {
   }
   async function selectChat(chat){
     if(selected)drafts.set(selected.id,el('wa-body').value);
-    selected=chat;lastMessages='';el('wa-body').value=drafts.get(chat.id)||'';el('wa-result').textContent='';el('wa-suggestion').hidden=true;suggestionId=null;
+    WhatsAppTools.reset();WhatsAppTools.selected();selected=chat;lastMessages='';el('wa-body').value=drafts.get(chat.id)||'';el('wa-result').textContent='';el('wa-suggestion').hidden=true;suggestionId=null;
     renderQueue();renderContext();el('wa-messages').replaceChildren(node('div','Carregando mensagens…','wa-empty'));
     try{await messages();}catch(e){if(selected?.id===chat.id)el('wa-result').textContent=e.message;}
   }
@@ -55,9 +62,9 @@ const WhatsAppDesk = (() => {
     const list=await request('/chats/'+encodeURIComponent(id)+'/messages');if(version!==epoch||selected?.id!==id)return;
     const digest=JSON.stringify(list);if(digest===lastMessages)return;const first=!lastMessages;lastMessages=digest;
     const box=el('wa-messages'),scroll=box.scrollTop,nearBottom=box.scrollHeight-box.clientHeight-scroll<90;box.replaceChildren();let day='';
-    for(const m of list){const currentDay=new Date(m.timestamp*1000).toLocaleDateString('pt-BR');if(currentDay!==day){box.append(node('span',currentDay,'wa-day'));day=currentDay;}const bubble=node('article',undefined,'wa-bubble'+(m.fromMe?' mine':''));bubble.append(node('p',m.body||(m.hasMedia?'Anexo recebido':'[Mensagem sem texto]')));if(m.hasMedia){const button=node('button','↓ Baixar anexo','text-button');button.type='button';button.onclick=()=>download(id,m);bubble.append(button);}const ack=m.fromMe?(m.ack>=3?' · Lida':m.ack>=2?' · Entregue':m.ack<0?' · Falha':' · Enviada'):'';bubble.append(node('small',new Date(m.timestamp*1000).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+ack));box.append(bubble);}
+    for(const m of list){const currentDay=new Date(m.timestamp*1000).toLocaleDateString('pt-BR');if(currentDay!==day){box.append(node('span',currentDay,'wa-day'));day=currentDay;}const bubble=node('article',undefined,'wa-bubble'+(m.fromMe?' mine':''));bubble.append(WhatsAppTools.text(m.body||(m.type==='revoked'?'Mensagem apagada':m.hasMedia?(m.type==='ptt'?'Mensagem de voz':'Anexo'):'Mensagem sem texto')));WhatsAppTools.enhance(bubble,m,id);const ack=m.fromMe?(m.ack>=3?' · Lida':m.ack>=2?' · Entregue':m.ack<0?' · Falha':' · Enviada'):'';bubble.append(node('small',new Date(m.timestamp*1000).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+ack));box.append(bubble);}
     if(!list.length)box.append(node('div','Nenhuma mensagem disponível. Você pode iniciar o atendimento abaixo.','wa-empty'));
-    box.scrollTop=first||nearBottom?box.scrollHeight:scroll;
+    box.scrollTop=first||nearBottom?box.scrollHeight:scroll;WhatsAppTools.afterMessages();
   }
   async function chats(version=epoch){
     const list=await request('/chats');if(version!==epoch)return;
@@ -66,36 +73,36 @@ const WhatsAppDesk = (() => {
   }
   async function poll(){
     if(!visible||polling)return;polling=true;const version=epoch;
-    try{const s=await request('/status');if(version!==epoch)return;aiConfigured=!!s.aiConfigured;connectionAllowed=s.canConnect??!['starting','qr','authenticated','syncing','ready'].includes(s.status);el('wa-connect').textContent=s.status==='ready'?'WhatsApp conectado':connectionAllowed?'Conectar WhatsApp':'Conexão em andamento';
+    try{const s=await request('/status');if(version!==epoch)return;aiConfigured=!!s.aiConfigured;disconnectionAllowed=s.canDisconnect??['starting','qr','authenticated','syncing','ready'].includes(s.status);el('wa-disconnect').textContent=['starting','qr'].includes(s.status)?'Cancelar conexão':'Desconectar aparelho';connectionAllowed=s.canConnect??!['starting','qr','authenticated','syncing','ready'].includes(s.status);el('wa-connect').textContent=s.status==='ready'?'WhatsApp conectado':connectionAllowed?'Conectar WhatsApp':'Conexão em andamento';
       const labels={disconnected:'WhatsApp desconectado',starting:'Iniciando conexão…',qr:'Escaneie o QR Code',authenticated:'Autenticado · sincronizando…',syncing:'Sessão vinculada · sincronizando com o painel…',ready:'● WhatsApp conectado',error:'Falha na conexão'};
-      el('wa-status').textContent=s.error||labels[s.status]||s.status;el('wa-qr').hidden=!s.qr;if(s.qr){el('wa-qr').src=s.qr;el('wa-connection').hidden=false;}else el('wa-qr').removeAttribute('src');enabled(s.status==='ready');
+      el('wa-status').textContent=s.error||labels[s.status]||s.status;el('wa-qr').hidden=!s.qr;if(s.qr){el('wa-qr').src=s.qr;el('wa-connection').hidden=false;}else el('wa-qr').removeAttribute('src');if(s.status==='ready'&&previousConnectionState!=='ready')el('wa-connection').hidden=true;previousConnectionState=s.status;enabled(s.status==='ready');
       if(ready){try{await chats(version);}catch(e){if(version===epoch)el('wa-chat-status').textContent=e.message;}try{await messages(version);}catch(e){if(version===epoch)el('wa-result').textContent=e.message;}}
-      else if(!selected)renderQueue();
+      else if(s.status==='disconnected'){clearSelection();allChats=[];drafts.clear();renderQueue();}else if(!selected)renderQueue();
     }catch(e){if(version===epoch){el('wa-status').textContent=e.name==='TimeoutError'?'O servidor demorou para responder.':e.message;enabled(false);}}
     finally{polling=false;if(visible)timer=setTimeout(poll,4000);}
   }
-  async function send(file){
+  async function send(file,voice=false){
     if(!selected||!ready||sending)return;const id=selected.id,version=epoch,body=el('wa-body').value.trim();
     if(!file&&!body)return;
     if(file&&file.size>8*1024*1024){el('wa-result').textContent='O arquivo deve ter no máximo 8 MB.';return;}
     sending=true;enabled(ready);el('wa-result').textContent=file?'Enviando anexo…':'Enviando mensagem…';
     try{
-      await request('/chats/'+encodeURIComponent(id)+(file?'/media?'+new URLSearchParams({mime:file.type,filename:file.name}):'/messages'),{method:'POST',body:file||JSON.stringify({body})});
+      await request('/chats/'+encodeURIComponent(id)+(file?'/media?'+new URLSearchParams({mime:file.type,filename:file.name,voice:voice?'1':'0'}):'/messages'),{method:'POST',body:file||JSON.stringify({body,quotedMessageId:WhatsAppTools.quoteId(id)})});
       if(version!==epoch||selected?.id!==id)return;
-      if(!file&&el('wa-body').value.trim()===body){el('wa-body').value='';drafts.delete(id);}el('wa-result').textContent='Enviado ao WhatsApp.';
-      try{await messages(version);await chats(version);}catch{el('wa-result').textContent='Enviado. A atualização do histórico falhou; confira no celular antes de reenviar.';}
+      if(!file&&el('wa-body').value.trim()===body){el('wa-body').value='';drafts.delete(id);}el('wa-result').textContent='Enviado ao WhatsApp.';WhatsAppTools.sent();
+      try{await messages(version);await chats(version);}catch{el('wa-result').textContent='Enviado. A atualização do histórico falhou; confira no celular antes de reenviar.';}return true;
     }catch(e){if(version===epoch&&selected?.id===id)el('wa-result').textContent=e.message+' Confira no celular antes de reenviar.';}
     finally{sending=false;el('wa-file').value='';enabled(ready);}
   }
   return {
-    init(options){config=options;
+    init(options){config=options;WhatsAppTools.init({selected:()=>selected,ready:()=>ready,send,report:text=>{el('wa-result').textContent=text;},download,media:(id,messageId)=>request('/chats/'+encodeURIComponent(id)+'/messages/'+encodeURIComponent(messageId)+'/media?preview=1',{download:true})});
       el('wa-connection-toggle').onclick=()=>{el('wa-connection').hidden=!el('wa-connection').hidden;};
-      for(const action of ['connect','disconnect'])el('wa-'+action).onclick=async()=>{if(action==='disconnect'&&!confirm('Desconectar este aparelho do WhatsApp?'))return;el('wa-status').textContent=action==='connect'?'Iniciando WhatsApp…':'Desconectando…';const button=el('wa-'+action);if(action==='connect'){connecting=true;connectionAllowed=false;}button.disabled=true;try{await request('/'+action,{method:'POST',body:'{}'});if(action==='disconnect'){selected=null;allChats=[];drafts.clear();lastMessages='';renderQueue();el('wa-messages').replaceChildren();el('wa-body').value='';enabled(false);}clearTimeout(timer);await poll();}catch(e){el('wa-status').textContent=e.message;}finally{if(action==='connect'){connecting=false;enabled(ready);}else button.disabled=false;}};
+      for(const action of ['connect','disconnect'])el('wa-'+action).onclick=async()=>{if(action==='disconnect'&&!disconnectionAllowed||action==='connect'&&!connectionAllowed)return;if(action==='disconnect'&&!confirm('Desconectar este aparelho do WhatsApp?'))return;el('wa-status').textContent=action==='connect'?'Iniciando WhatsApp…':'Desconectando…';const button=el('wa-'+action);++epoch;clearTimeout(timer);connectionAllowed=false;disconnectionAllowed=false;if(action==='connect')connecting=true;else disconnecting=true;button.disabled=true;try{const next=await request('/'+action,{method:'POST',body:'{}'});connectionAllowed=next.canConnect??next.status==='disconnected';disconnectionAllowed=next.canDisconnect??['starting','qr','authenticated','syncing','ready'].includes(next.status);if(action==='disconnect'){el('wa-status').textContent='WhatsApp desconectado';el('wa-connect').textContent='Conectar WhatsApp';clearSelection();allChats=[];drafts.clear();lastMessages='';renderQueue();el('wa-messages').replaceChildren();el('wa-body').value='';enabled(false);}clearTimeout(timer);await poll();}catch(e){el('wa-status').textContent=e.message;}finally{if(action==='connect'){connecting=false;enabled(ready);}else{disconnecting=false;enabled(ready);}}};
       el('wa-refresh').onclick=async()=>{try{await chats();await messages();}catch(e){el('wa-chat-status').textContent=e.message;}};
       el('wa-search').oninput=renderQueue;
       for(const button of el('wa-filters').querySelectorAll('button'))button.onclick=()=>{filter=button.dataset.filter;for(const b of el('wa-filters').querySelectorAll('button'))b.classList.toggle('active',b===button);renderQueue();};
       el('wa-send').onsubmit=e=>{e.preventDefault();send();};el('wa-body').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();send();}};
-      el('wa-attach').onclick=()=>el('wa-file').click();el('wa-file').onchange=()=>{const file=el('wa-file').files[0];if(file&&confirm('Enviar o arquivo “'+file.name+'” para '+selected?.name+'?'))send(file);else el('wa-file').value='';};
+      el('wa-file').onchange=()=>{const file=el('wa-file').files[0];if(file&&confirm('Enviar o arquivo “'+file.name+'” para '+selected?.name+'?'))send(file);else el('wa-file').value='';};
       const save=async patch=>{try{await patchDesk(patch);el('wa-result').textContent='Atendimento atualizado.';}catch(e){el('wa-result').textContent=e.message;renderContext();}};
       el('wa-stage').onchange=()=>save({status:el('wa-stage').value});el('wa-favorite').onclick=()=>save({favorite:!selected?.desk?.favorite});el('wa-save-notes').onclick=()=>save({assignedTo:el('wa-owner').value,notes:el('wa-notes').value});el('wa-ai-enabled').onchange=()=>save({aiEnabled:el('wa-ai-enabled').checked});el('wa-order').onchange=()=>save({orderId:el('wa-order').value});el('wa-open-order').onclick=()=>config.openOrder?.(selected?.desk?.orderId);el('wa-create-order').onclick=()=>config.createOrder?.();
       const templates=[['Boas-vindas','Olá! Seja bem-vindo(a) à Emoções Flores 🌸 Como posso ajudar você a presentear hoje?'],['Entender o pedido','Para qual ocasião você procura o presente? Tem alguma preferência de flores ou faixa de valor?'],['Entrega','Podemos conferir a entrega para você. Qual é a cidade, o endereço e a data desejada?'],['Retirada','Nossa retirada é na Rua Havana, 95, Parque das Américas, Mauá. Para qual dia você precisa?'],['Agradecimento','Obrigada por escolher a Emoções Flores! 🌸 Se precisar de algo mais, estou por aqui.']];
@@ -104,7 +111,7 @@ const WhatsAppDesk = (() => {
       el('wa-use-ai').onclick=()=>{if(suggestionId===selected?.id){el('wa-body').value=el('wa-suggestion-text').textContent;el('wa-suggestion').hidden=true;el('wa-body').focus();}};el('wa-dismiss-ai').onclick=()=>{el('wa-suggestion').hidden=true;suggestionId=null;};
       el('wa-new').onclick=()=>{el('wa-new-result').textContent='';el('wa-new-dialog').showModal();};el('wa-close-new').onclick=()=>el('wa-new-dialog').close();el('wa-new-form').onsubmit=async e=>{e.preventDefault();const button=e.currentTarget.querySelector('button');button.disabled=true;try{const chat=await request('/new-chat',{method:'POST',body:JSON.stringify({phone:el('wa-new-phone').value})});const existing=allChats.find(c=>c.id===chat.id);if(!existing)allChats.unshift(chat);await selectChat(existing||chat);el('wa-new-dialog').close();}catch(error){el('wa-new-result').textContent=error.message;}finally{button.disabled=false;}};enabled(false);
     },
-    setVisible(value){if(visible===value)return;visible=value;++epoch;clearTimeout(timer);if(value){el('wa-status').textContent='Consultando conexão…';poll();}},
-    logout(){visible=false;++epoch;clearTimeout(timer);selected=null;ready=false;allChats=[];drafts.clear();lastMessages='';suggestionId=null;el('wa-suggestion').hidden=true;el('wa-suggestion-text').textContent='';el('wa-qr').hidden=true;el('wa-qr').removeAttribute('src');el('wa-chats').replaceChildren();el('wa-messages').replaceChildren();for(const id of ['wa-body','wa-owner','wa-notes'])el(id).value='';el('wa-result').textContent='';el('wa-chat-status').textContent='';el('wa-title').textContent='Selecione uma conversa';el('wa-contact-name').textContent='Informações do contato';el('wa-contact-phone').textContent='';el('wa-phone').textContent='';el('wa-timeline').replaceChildren();enabled(false);for(const id of ['wa-template-dialog','wa-new-dialog'])if(el(id).open)el(id).close();}
+    setVisible(value){if(visible===value)return;visible=value;++epoch;clearTimeout(timer);if(value){el('wa-status').textContent='Consultando conexão…';poll();}else WhatsAppTools.reset();},
+    logout(){document.body.classList.remove('whatsapp-mode');WhatsAppTools.reset();el('view-whatsapp').classList.remove('chat-open','context-open');previousConnectionState=null;connectionAllowed=false;disconnectionAllowed=false;visible=false;++epoch;clearTimeout(timer);selected=null;ready=false;allChats=[];drafts.clear();lastMessages='';suggestionId=null;el('wa-suggestion').hidden=true;el('wa-suggestion-text').textContent='';el('wa-qr').hidden=true;el('wa-qr').removeAttribute('src');el('wa-chats').replaceChildren();el('wa-messages').replaceChildren();for(const id of ['wa-body','wa-owner','wa-notes'])el(id).value='';el('wa-result').textContent='';el('wa-chat-status').textContent='';el('wa-title').textContent='Selecione uma conversa';el('wa-contact-name').textContent='Informações do contato';el('wa-contact-phone').textContent='';el('wa-phone').textContent='';el('wa-timeline').replaceChildren();enabled(false);for(const id of ['wa-template-dialog','wa-new-dialog'])if(el(id).open)el(id).close();}
   };
 })();

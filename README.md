@@ -148,15 +148,15 @@ A versão 1.4 tem 25 testes automatizados e validação Chromium de máscaras, p
 
 ## Atendimento WhatsApp e Florzinha
 
-![Atendimento com dados fictícios e sugestão simulada da Florzinha](docs/atendimento-florzinha.png)
+![Atendimento com dados fictícios e emojis no novo tema escuro](docs/atendimento-florzinha.png)
 
 A imagem usa somente dados fictícios de teste; não mostra mensagens reais.
 
-A área **Atendimento WhatsApp** reúne fila, busca por nome/número/última mensagem, filtros (não lidas, favoritas, em atendimento e concluídas), histórico de até 80 mensagens por conversa, envio de texto e anexos, respostas rápidas e nova conversa por número. A interface tem três colunas: fila, conversa e contexto. A lista carrega até 200 conversas individuais e atualiza automaticamente a cada quatro segundos enquanto essa tela está aberta. Identificadores `@c.us` e `@lid` são aceitos; LID não deve ser interpretado como número de telefone. Grupos, canais e chamadas não são atendidos.
+A área **Atendimento WhatsApp** reúne fila, busca por nome/número/última mensagem, filtros (não lidas, favoritas, em atendimento e concluídas), histórico de até 80 mensagens por conversa, envio de texto e anexos, respostas rápidas e nova conversa por número. A interface usa o estilo escuro do WhatsApp Web, com lista de conversas à esquerda e histórico/compositor à direita. Informações do contato, notas, pedido e Florzinha ficam em um painel lateral recolhível pelo botão de informações. A lista carrega até 200 conversas individuais e atualiza automaticamente a cada quatro segundos enquanto essa tela está aberta. Identificadores `@c.us` e `@lid` são aceitos; LID não deve ser interpretado como número de telefone. Grupos, canais e chamadas não são atendidos.
 
 **Informações internas:** etapa, favorito, responsável, notas e vínculo manual a pedido existente são gravados em `.whatsapp-desk.json`, com as últimas 100 alterações de campos por conversa. Esse arquivo é privado, ignorado pelo Git e precisa de backup junto da instalação. Não é uma tabela SQL nem controle de permissões por funcionário. “Criar pedido no PDV” abre o cadastro normal; não copia dados de uma conversa automaticamente nem registra pedido sozinho. A lista de pedidos usa os registros já carregados no painel. As respostas rápidas são textos iniciais editáveis no compositor antes do envio.
 
-**Arquivos:** envio de imagem JPEG/PNG/WebP, PDF, áudio MP3/OGG/M4A e vídeo MP4 de até 8 MB; o operador confirma o destinatário antes do envio. Anexos recebidos podem ser baixados (até aproximadamente 12 MB) e abertos no aplicativo apropriado. Não há gravação de voz, visualizador de mídia embutido ou chamadas. Nenhum arquivo ou mensagem é enviado automaticamente. Em caso de erro de envio, confira no celular antes de repetir para evitar duplicatas. Status de entrega/leitura depende dos dados retornados pelo WhatsApp.
+**Arquivos:** envio de imagem JPEG/PNG/WebP, PDF, áudio MP3/OGG/M4A/WebM e vídeo MP4 de até 8 MB; o operador confirma o destinatário antes do envio. Anexos recebidos podem ser baixados (até aproximadamente 12 MB) e abertos no aplicativo apropriado. Imagens, áudio e vídeo compatíveis podem ser abertos no histórico; PDFs e outros formatos são baixados. O microfone permite gravar até dois minutos, ouvir e só então enviar; exige permissão no Chrome em localhost ou HTTPS. A gravação pode ser descartada. Chamadas de voz/vídeo não são implementadas. Nenhum arquivo ou mensagem é enviado automaticamente. Em caso de erro de envio, confira no celular antes de repetir para evitar duplicatas. Status de entrega/leitura depende dos dados retornados pelo WhatsApp.
 
 ### Instalar ou atualizar no Windows
 
@@ -196,7 +196,7 @@ Reinicie o servidor após configurar. Selecione uma conversa, habilite **Florzin
 
 ### Validação e limites
 
-A interface e as rotas foram validadas com conversas e provedor de IA simulados, incluindo recuperação de falha de serialização, IDs LID, envio, anexos, persistência, habilitação da Florzinha, isolamento de rascunhos e layout móvel. A geração real da IA não foi executada nesta nuvem por falta de chave. O usuário confirmou a vinculação do WhatsApp no Windows; a recuperação da listagem com esta atualização ainda precisa ser conferida nessa máquina. Não se presume que testes simulados confirmem mensagens reais recebidas/enviadas.
+A interface e as rotas foram validadas com conversas e provedor de IA simulados, incluindo recuperação de falha de serialização, IDs LID, envio, anexos, persistência, habilitação da Florzinha, isolamento de rascunhos e layout móvel. A geração real da IA não foi executada nesta nuvem por falta de chave. O usuário confirmou a vinculação do WhatsApp no Windows; o usuário confirmou depois a leitura de conversas antigas e novas no painel. A entrega real das novas funções de áudio e citação ainda precisa ser conferida nessa máquina. Não se presume que testes simulados confirmem mensagens reais recebidas/enviadas.
 
 A biblioteca whatsapp-web.js é uma integração não oficial, sujeita a alterações e restrições do WhatsApp. Para acesso ao painel pela rede, use HTTPS e mantenha a chave administrativa privada. Não há integração Instagram/Messenger/e-mail, métricas financeiras do atendimento, envio automático de IA ou login/permissão por atendente nesta versão. A nuvem de preparação tem restrições de navegador/rede documentadas no histórico; não presuma que a conexão local valida a nuvem.
 
@@ -211,3 +211,16 @@ A área **Pedidos** segue o formato de operação da referência: linhas compact
 Se a biblioteca falhar após o WhatsApp estar autenticado, a API verifica a conexão do socket, a leitura da coleção de conversas e as funções de integração. Quando necessário, reinstala na página as funções auxiliares da própria biblioteca e só marca pronto após verificar acesso às conversas. A lista é lida sem passar pela serialização global de grupos. A verificação também é repetida pelo painel, permitindo recuperar uma sessão aberta sem criar outro navegador.
 
 O botão Conectar é bloqueado durante inicialização, QR pendente, sincronização e sessão pronta. O servidor também impede criar um segundo cliente nessa situação. O estado pode mostrar “Sessão vinculada · sincronizando” enquanto a ponte de integração ainda não está pronta; isso não significa que leitura/envio já foram validados. O navegador oculto precisa continuar rodando no servidor para manter o atendimento no painel. Esses fluxos foram testados com sessão e conversas simuladas; a recuperação efetiva da conta do proprietário ainda precisa ser conferida no Windows.
+
+## Visual de mensageiro e ferramentas de conversa
+
+O atendimento usa tema escuro, balões enviados/recebidos, papel de parede floral discreto, navegação lateral compacta e compositor sempre visível. O painel de conexão fecha ao ficar pronto e pode ser reaberto pelo botão Conexão. Os detalhes e a Florzinha ficam no botão de informações do cabeçalho. No celular, tocar numa conversa abre o histórico; a seta retorna à lista.
+
+- **Emojis:** seletor com categorias e busca em português. O emoji é inserido na posição do cursor; não envia a mensagem.
+- **Pesquisa:** o botão de lupa pesquisa nas até 80 mensagens carregadas, com navegação entre resultados. Não é uma busca global em todo o histórico da conta.
+- **Mensagens:** links HTTP/HTTPS clicáveis e formatação simples `*negrito*`, `_itálico_`, `~riscado~` e crase para código; texto de clientes nunca é inserido como HTML. As ações Responder e Copiar aparecem ao passar o mouse (sempre acessíveis no celular). A resposta citada é suportada para texto; antes de enviar, o servidor confere se a mensagem pertence à conversa.
+- **Anexos:** o botão ＋ oferece fotos/vídeos, PDF e áudio. A abertura de imagens/áudio/vídeo no histórico é feita sob demanda; há também o botão Baixar. A prévia aceita somente os tipos de mídia previstos, sem executar HTML/SVG. O envio de anexo é confirmado antes de transmitir.
+- **Voz:** grave com o microfone, clique em Parar, ouça e escolha Enviar áudio ou Descartar. Nada é enviado ao iniciar/parar a gravação. Trocar de conversa descarta a gravação local. A transmissão é feita como mensagem de voz pela biblioteca WhatsApp; depende da compatibilidade atual do WhatsApp Web.
+- **Conexão:** Conectar fica bloqueado enquanto há sessão em andamento. Desconectar só fica ativo quando existe sessão para encerrar; pedidos repetidos não repetem o logout. Desconectar ou perder a sessão limpa o histórico exibido e desabilita o compositor.
+
+Foram validados no Chromium, com conta/arquivos simulados, o layout desktop/móvel, posição do compositor, emoji no cursor, busca, citação, prévia de imagem, gravação/revisão/envio simulado de áudio e bloqueio de desconexão. A suíte de aplicação contém 45 testes aprovados; a auditoria npm não apontou vulnerabilidades conhecidas na verificação. GIFs de catálogo, reações, grupos e chamadas não têm botões simulados nesta versão.

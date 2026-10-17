@@ -12,10 +12,11 @@ function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeout
   };
   const browserAlive = () => !!(client?.pupBrowser?.isConnected?.() || (client?.pupPage && !client.pupPage.isClosed?.()));
   const canConnect = () => !starting && !browserAlive() && !['starting','qr','authenticated','syncing','ready'].includes(state.status);
+  const canDisconnect = () => !!client && state.status !== 'disconnected' && (browserAlive() || !['error'].includes(state.status));
   async function refreshStatus() {
     if (client?.pupPage?.isClosed?.() && state.status !== 'disconnected') { ++generation; starting = null; clearTimeout(startupTimer); state = { status:'disconnected', qr:null, error:'A conexão do WhatsApp foi encerrada.' }; }
-    if (!client?.pupPage || state.status === 'disconnected') return { ...state, canConnect: canConnect() };
-    if (probing) { await probing; return { ...state, canConnect: canConnect() }; }
+    if (!client?.pupPage || state.status === 'disconnected') return { ...state, canConnect: canConnect(), canDisconnect: canDisconnect() };
+    if (probing) { await probing; return { ...state, canConnect: canConnect(), canDisconnect: canDisconnect() }; }
     const current = generation, active = client;
     probing = (async () => {
       try {
@@ -41,14 +42,14 @@ function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeout
       }
     })().finally(() => { probing = null; });
     await probing;
-    return { ...state, canConnect: canConnect() };
+    return { ...state, canConnect: canConnect(), canDisconnect: canDisconnect() };
   }
   const requireReady = () => {
     if (state.status !== 'ready' || !client) throw Object.assign(new Error('Conecte o WhatsApp antes de continuar.'), { status: 409 });
     return client;
   };
   return {
-    status: () => ({ ...state, canConnect: canConnect() }),
+    status: () => ({ ...state, canConnect: canConnect(), canDisconnect: canDisconnect() }),
     refreshStatus,
     async connect() {
       if (starting || !canConnect()) return;
@@ -106,6 +107,7 @@ function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeout
       }
     },
     async disconnect() {
+      if (!canDisconnect()) return;
       clearTimeout(startupTimer);
       ++generation;
       starting = null;
@@ -155,13 +157,19 @@ function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeout
       if (!media || !media.data || media.data.length > 16 * 1024 * 1024) throw new Error('Anexo indisponível ou grande demais.');
       return media;
     },
-    async sendMedia(id, data, mimetype, filename, caption) {
+    async sendMedia(id, data, mimetype, filename, caption, voice = false) {
       const { MessageMedia } = require('whatsapp-web.js');
-      const result = await requireReady().sendMessage(id, new MessageMedia(mimetype, data.toString('base64'), filename), { caption, sendSeen: false });
+      const result = await requireReady().sendMessage(id, new MessageMedia(mimetype, data.toString('base64'), filename), { caption, sendSeen: false, sendAudioAsVoice: voice });
       return { id: result.id._serialized };
     },
-    async send(id, body) {
-      const result = await requireReady().sendMessage(id, body, { sendSeen: false });
+    async send(id, body, quotedMessageId) {
+      const current = requireReady();
+      if (quotedMessageId) {
+        const quoted = await current.getMessageById(quotedMessageId);
+        if (!quoted || ![quoted.from,quoted.to,quoted.id?.remote?._serialized||quoted.id?.remote].includes(id))
+          throw Object.assign(new Error('A mensagem citada não pertence a esta conversa.'), { status: 400 });
+      }
+      const result = await current.sendMessage(id, body, { sendSeen: false, ...(quotedMessageId ? { quotedMessageId } : {}) });
       return { id: result.id._serialized };
     }
   };

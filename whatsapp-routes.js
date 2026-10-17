@@ -28,17 +28,21 @@ function whatsappRoutes(service, desk = require('./whatsapp-desk-store').createD
     try {
       const media = await service.media(req.params.id, req.params.messageId);
       const filename = String(media.filename || 'anexo').replace(/[^a-zA-Z0-9._-]/g,'_').slice(0,100);
-      res.set('Content-Type','application/octet-stream');
-      res.set('Content-Disposition','attachment; filename="'+filename+'"');
+      const mime = String(media.mimetype||'').split(';')[0];
+      const preview = req.query.preview === '1';
+      if (preview && !['image/jpeg','image/png','image/webp','image/gif','audio/mpeg','audio/ogg','audio/mp4','audio/webm','video/mp4'].includes(mime))
+        return res.status(415).json({error:'Este formato não tem prévia. Use Baixar para abrir o arquivo.'});
+      res.set('Content-Type',preview ? mime : 'application/octet-stream');
+      res.set('Content-Disposition',(preview?'inline':'attachment')+'; filename="'+filename+'"');
       res.send(Buffer.from(media.data,'base64'));
     } catch(e) { next(e); }
   });
   router.post('/chats/:id/media', express.raw({type:'application/octet-stream',limit:'8mb'}), async (req,res,next) => {
     const mime = String(req.query.mime || '');
-    if (!['image/jpeg','image/png','image/webp','application/pdf','audio/mpeg','audio/ogg','audio/mp4','video/mp4'].includes(mime) || !Buffer.isBuffer(req.body) || !req.body.length)
+    if (!['image/jpeg','image/png','image/webp','application/pdf','audio/mpeg','audio/ogg','audio/mp4','audio/webm','video/mp4'].includes(mime) || !Buffer.isBuffer(req.body) || !req.body.length)
       return res.status(400).json({ error: 'Selecione imagem, PDF, áudio ou vídeo de até 8 MB.' });
     const filename = String(req.query.filename || 'anexo').replace(/[^a-zA-Z0-9._-]/g,'_').slice(0,100);
-    try { res.status(201).json(await service.sendMedia(req.params.id,req.body,mime,filename,'')); } catch(e) { next(e); }
+    try { res.status(201).json(await service.sendMedia(req.params.id,req.body,mime,filename,'',req.query.voice === '1' && mime.startsWith('audio/'))); } catch(e) { next(e); }
   });
   router.post('/chats/:id/suggestion', async (req,res,next) => {
     try {
@@ -49,9 +53,9 @@ function whatsappRoutes(service, desk = require('./whatsapp-desk-store').createD
   });
   router.get('/chats/:id/messages', async (req,res,next) => { try { res.json(await service.messages(req.params.id)); } catch(e) { next(e); } });
   router.post('/chats/:id/messages', async (req,res,next) => {
-    const parsed = z.object({ body: z.string().trim().min(1).max(4000) }).safeParse(req.body);
+    const parsed = z.object({ body: z.string().trim().min(1).max(4000), quotedMessageId: z.string().min(1).max(250).optional() }).safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Escreva uma mensagem de até 4.000 caracteres.' });
-    try { res.status(201).json(await service.send(req.params.id, parsed.data.body)); } catch(e) { next(e); }
+    try { res.status(201).json(await service.send(req.params.id, parsed.data.body, parsed.data.quotedMessageId)); } catch(e) { next(e); }
   });
   router.use((err,req,res,next) => {
     if (err.publicError) return res.status(err.status).json({error:err.message});

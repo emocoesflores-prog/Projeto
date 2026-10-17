@@ -24,7 +24,7 @@ async function readSettings(){
  if(!result.recordset.length)throw new Error('Configuração da loja ausente');
  return {...defaults,deliveryFee:result.recordset[0].deliveryFee};
 }
-app.use(helmet());
+app.use(helmet({contentSecurityPolicy:{directives:{imgSrc:["'self'","data:","blob:"],mediaSrc:["'self'","blob:"]}}}));
 app.use(express.json({limit:'40kb'}));
 app.use('/api',rateLimit({windowMs:60000,limit:120}));
 app.use('/api/admin',(req,res,next)=>{res.set('Cache-Control','no-store');next()});
