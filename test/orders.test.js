@@ -1,3 +1,4 @@
+process.env.AUTH_MODE='legacy';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 process.env.DATA_MODE = 'demo';

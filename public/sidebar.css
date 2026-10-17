@@ -23,3 +23,5 @@
 .dashboard.whatsapp-mode.sidebar-expanded .sidebar .brand{color:var(--wa-text)}
 @media(max-width:760px){.dashboard.sidebar-expanded .dashboard-shell{margin-left:68px!important}.dashboard.sidebar-expanded .sidebar{box-shadow:8px 0 25px #0004}.dashboard.sidebar-expanded .sidebar nav button{min-height:44px}}
 @media(max-width:760px){.dashboard .dashboard-topbar{height:auto;min-height:60px;flex-wrap:wrap;gap:8px;padding:10px 14px}.dashboard .dashboard-topbar>div{gap:8px;flex-wrap:wrap}.dashboard .dashboard-topbar .pill{white-space:normal}.dashboard .orders-secondary-filters{flex-wrap:wrap}}
+
+.dashboard.sidebar-expanded .sidebar .brand{white-space:normal!important;font-size:20px!important;line-height:1.3;overflow-wrap:anywhere}

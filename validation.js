@@ -9,7 +9,7 @@ const calendarDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value=>{
 const detailsObject=z.object({
  customer:z.string().trim().max(120).default(''),phone:z.union([phone,z.literal('')]).default(''),
  recipient:z.string().trim().max(120).default(''),recipientPhone:z.union([phone,z.literal('')]).default(''),
- fulfillment:z.enum(['store','pickup','delivery']),city:z.enum(cities).optional(),address:z.string().trim().max(500).optional(),
+ fulfillment:z.enum(['store','pickup','delivery']),city:z.string().trim().max(100).refine(require('./tenant-context').serves,'Cidade fora da área de entrega desta floricultura.').optional(),address:z.string().trim().max(500).optional(),
  date:calendarDate,period:z.enum(['Manhã','Tarde']),
  scheduleMode:z.enum(['now','scheduled']).default('scheduled'),timeSlot:z.union([z.enum(options.slots),z.literal('')]).default(''),
  message:z.string().max(500).default(''),anonymous:z.boolean().default(false),

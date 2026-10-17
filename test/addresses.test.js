@@ -1,3 +1,4 @@
+process.env.AUTH_MODE='legacy';
 const {test}=require('node:test');const assert=require('node:assert/strict');
 process.env.DATA_MODE='demo';process.env.ADMIN_TOKEN='addresses-test-key';
 const app=require('../server');const {createCepService}=require('../cep-service');const masks=require('../public/input-masks');

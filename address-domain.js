@@ -9,7 +9,7 @@ const addressSchema=z.object({
  number:z.string().trim().min(1,'O número é obrigatório.').max(20).refine(value=>/\d/.test(value),'Informe o número do imóvel.'),
  neighborhood:z.string().trim().min(2,'Informe o bairro.').max(100),
  complement:z.string().trim().max(150).default(''),reference:z.string().trim().max(200).default(''),
- city:z.enum(['Mauá','Santo André','Ribeirão Pires']),state:z.literal('SP'),
+ city:z.string().trim().max(100).refine(require('./tenant-context').serves,'Cidade fora da área de entrega desta floricultura.'),state:z.string().regex(/^[A-Z]{2}$/).refine(value=>require('./tenant-context').context.getStore()?.multi||value==='SP','Confira a UF.'),
  recipient:z.string().trim().min(3,'Informe o nome de quem recebe o presente.').max(120),
  recipientPhone:z.string().trim().max(30).refine(value=>!!normalizePhone(value),'Informe um telefone válido de quem recebe, com DDD.').transform(normalizePhone)
 });

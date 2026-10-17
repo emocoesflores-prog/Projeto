@@ -6,9 +6,9 @@ function whatsappRoutes(service, desk = require('./whatsapp-desk-store').createD
   router.get('/events',(req,res)=>{
     if(!service.subscribe)return res.sendStatus(204);
     res.set({'Content-Type':'text/event-stream','Cache-Control':'no-store','Connection':'keep-alive','X-Accel-Buffering':'no'});res.flushHeaders();
-    const send=state=>res.write('data: '+JSON.stringify({...state,aiConfigured:florzinha.configured()})+'\n\n');
+    const send=state=>{void(async()=>{if(req.validateSession&&!await req.validateSession()){res.end();return;}if(!res.destroyed)res.write('data: '+JSON.stringify({...state,aiConfigured:florzinha.configured()})+'\n\n');})().catch(()=>res.end());};
     const unsubscribe=service.subscribe(send);send(service.status());
-    const heartbeat=setInterval(()=>res.write(': heartbeat\n\n'),15000);heartbeat.unref?.();
+    const heartbeat=setInterval(()=>{void(async()=>{if(req.validateSession&&!await req.validateSession())return res.end();res.write(': heartbeat\n\n');})().catch(()=>res.end());},15000);heartbeat.unref?.();
     req.on('close',()=>{clearInterval(heartbeat);unsubscribe();});
   });
   router.get('/status', async (req,res,next) => { try { const state = service.refreshStatus ? await service.refreshStatus() : service.status(); res.json({ ...state, aiConfigured: florzinha.configured() }); } catch(e) { next(e); } });
@@ -55,7 +55,7 @@ function whatsappRoutes(service, desk = require('./whatsapp-desk-store').createD
   router.post('/chats/:id/suggestion', async (req,res,next) => {
     try {
       const metadata = await desk.all();
-      if (!metadata[req.params.id]?.aiEnabled) return res.status(409).json({ error: 'Habilite a Florzinha nesta conversa antes de gerar uma sugestão.' });
+      if (!metadata[req.params.id]?.aiEnabled) return res.status(409).json({ error: 'Habilite a assistente nesta conversa antes de gerar uma sugestão.' });
       res.json({ text: await florzinha.suggest(await service.messages(req.params.id)) });
     } catch(e) { next(e); }
   });
@@ -70,7 +70,7 @@ function whatsappRoutes(service, desk = require('./whatsapp-desk-store').createD
     if ([400,404,409].includes(err.status)) return res.status(err.status).json({ error: err.message });
     if (err.type === 'entity.too.large') return res.status(413).json({ error: 'O arquivo deve ter no máximo 8 MB.' });
     const messages = {
-      suggestion: ['FLORZINHA_FAILED', 'Não foi possível gerar a sugestão da Florzinha. Tente novamente.'],
+      suggestion: ['FLORZINHA_FAILED', 'Não foi possível gerar a sugestão da assistente. Tente novamente.'],
       desk: ['WA_DESK_FAILED', 'Não foi possível salvar os dados do atendimento.'],
       media: ['WA_MEDIA_FAILED', 'Não foi possível transferir o anexo. Confira no celular antes de reenviar.'],
       chats: ['WA_CHATS_FAILED', 'Não foi possível carregar as conversas. A sessão pode continuar conectada; tente Atualizar conversas.'],

@@ -1,0 +1,12 @@
+const {AsyncLocalStorage}=require('node:async_hooks');
+const context=new AsyncLocalStorage();
+const PLATFORM_TENANT='00000000-0000-4000-8000-000000000002';
+const PLATFORM_NAME='Inova Facil Consultoria e Solucoes em Tecnologia Ltda - ME';
+const PLATFORM_LOGIN='53770070000195';
+const PLATFORM_PHONE='11966333900';
+const DEFAULT_TENANT='00000000-0000-4000-8000-000000000001';
+const tenantId=()=>context.getStore()?.tenantId||DEFAULT_TENANT;
+const originalCities=['Mauá','Santo André','Ribeirão Pires'];
+const policy=tenant=>({tenantId:tenant.id,multi:true,deliveryCities:tenant.profile.deliveryCities||(tenant.id===DEFAULT_TENANT?originalCities:[tenant.profile.city].filter(Boolean))});
+const serves=city=>(context.getStore()?.deliveryCities||originalCities).includes(city);
+module.exports={context,DEFAULT_TENANT,PLATFORM_TENANT,PLATFORM_NAME,PLATFORM_LOGIN,PLATFORM_PHONE,tenantId,policy,serves};

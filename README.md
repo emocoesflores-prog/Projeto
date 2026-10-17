@@ -1,3 +1,5 @@
+> Plataforma com lojas separadas, login e assistentes personalizadas: leia [PLATAFORMA.md](PLATAFORMA.md) antes de atualizar uma instalação existente.
+
 # Floricultura Emoções Flores
 
 Loja e central de pedidos em português para **Mauá, Santo André e Ribeirão Pires (SP)**, com Node.js 24, Express e SQL Server. Retirada gratuita: **Rua Havana, 95, Parque das Américas, Mauá – SP**. Frete inicial de **R$ 20**, alterável pelo painel.
@@ -23,7 +25,7 @@ Com o processo ativo, abra na própria máquina:
 - Loja: `http://localhost:3000`
 - Administração: `http://localhost:3000/admin.html`
 
-O painel usa a chave `ADMIN_TOKEN`. O `.env` não deve ser enviado ao GitHub. Em demonstração, pedidos e mudanças de frete ficam em memória e desaparecem ao reiniciar. Não use dados pessoais reais nesse modo. Para atualizar uma instalação existente, siga **ATUALIZAR-WINDOWS.txt**; preserve seu `.env`.
+O painel da plataforma usa usuário e senha. `ADMIN_TOKEN` é usado apenas na configuração inicial do administrador principal. Para migrar e cadastrar outras lojas, siga [PLATAFORMA.md](PLATAFORMA.md). O `.env` não deve ser enviado ao GitHub. Em demonstração, pedidos e mudanças de frete ficam em memória e desaparecem ao reiniciar. Não use dados pessoais reais nesse modo. Para atualizar uma instalação existente, siga **ATUALIZAR-WINDOWS.txt**; preserve seu `.env`.
 
 ## SQL Server local
 
@@ -41,9 +43,9 @@ SQL_TRUST_CERTIFICATE=false
 
 A porta deve corresponder à sua instância. A conexão é criptografada. Somente em desenvolvimento local com certificado próprio, use `SQL_TRUST_CERTIFICATE=true`; em produção, use certificado confiável e `false`.
 
-`sql/schema.sql` cria `dbo.Orders` e `dbo.StoreSettings`, sem redefinir a taxa. A versão 1.3 adiciona o cadastro independente `dbo.Customers` por meio de **sql/customers.sql**. Execute os scripts no SSMS com uma conta autorizada a criar tabelas; para a instalação padrão o banco é `Floricultura`. O script de clientes contém `USE [Floricultura]`; se configurou outro banco, ajuste essa linha antes de executar. Depois, a conta da aplicação necessita apenas de SELECT, INSERT e UPDATE. Não é necessário conceder `db_ddladmin` à aplicação.
+`sql/schema.sql` cria `dbo.Orders` e `dbo.StoreSettings`, sem redefinir a taxa. A versão 1.3 adiciona o cadastro independente `dbo.Customers` por meio de **sql/customers.sql**. Execute os scripts no SSMS com uma conta autorizada a criar tabelas; para a instalação padrão o banco é `Floricultura`. O script de clientes contém `USE [Floricultura]`; se configurou outro banco, ajuste essa linha antes de executar. Na plataforma, a conta da aplicação precisa de SELECT, INSERT e UPDATE nas tabelas utilizadas e DELETE em dbo.AppSessions para encerrar sessões. Não é necessário conceder `db_ddladmin` à aplicação.
 
-Em uma instalação nova, crie o banco, selecione-o no SSMS, execute `sql/schema.sql` e depois `sql/customers.sql`. Em uma instalação anterior à versão 1.3, execute somente `sql/customers.sql`. Se `dbo.Customers` já existe, a versão 1.4 não exige outro script nem alteração de tabelas. O aplicativo informa a ausência do cadastro caso você tente iniciar antes dessa etapa.
+Em uma instalação nova, crie o banco, selecione-o no SSMS, execute `sql/schema.sql` e depois `sql/customers.sql`. Em uma instalação anterior à versão 1.3, execute somente `sql/customers.sql`. Para ativar esta versão com várias lojas, execute também `sql/multitenant.sql`, mesmo que `dbo.Customers` já exista. O aplicativo informa a ausência do cadastro caso você tente iniciar antes dessa etapa.
 
 A versão 1.3 **adiciona uma tabela de clientes e não exige recriar o banco**. O script pode ser executado novamente: não apaga pedidos, não redefine clientes existentes e importa nomes/telefones válidos dos pedidos anteriores, agrupados pelo WhatsApp normalizado. Os campos dos pedidos, preços registrados, histórico e versão continuam usando a coluna JSON existente. Pedidos antigos continuam legíveis: histórico e preços individuais antigos não são inventados, e o total original é preservado. Alterações SQL usam transação com bloqueio da linha e conferência de versão para evitar sobrescrever uma operação feita em outra tela.
 
@@ -73,7 +75,7 @@ O menu **Clientes** consulta os cadastros do banco, independentemente de terem p
 
 Depois de salvar pelo PDV, o cadastro é selecionado automaticamente sem perder o carrinho ou o agendamento. O novo pedido guarda `customerId` e uma cópia do nome/telefone recuperados pelo servidor. A busca não usa os dados dos últimos pedidos, e falhas de rede não são tratadas como cliente inexistente. Notas e dados opcionais não aparecem na lista resumida; o perfil completo é acessível somente na área administrativa. O perfil principal pode ser consultado; edição/exclusão dos dados principais ainda não foram implementadas. Os endereços de entrega e destinatários podem ser cadastrados e editados pela janela de entregas, mantendo histórico. Alterar um pedido não altera automaticamente o cadastro do comprador nem o histórico de outros pedidos.
 
-No SQL Server, a tabela `dbo.Customers` mantém identidade, nome, telefone único e os opcionais em JSON. Em demo, esse cadastro é independente e fica em memória, sendo perdido ao reiniciar. O script de importação recupera contatos válidos de pedidos antigos sem modificar esses pedidos. Cadastros futuros de clientes feitos apenas na loja pública não são automaticamente incorporados ao diretório nesta versão; o operador pode cadastrá-los pelo painel. As rotas de cadastro e busca exigem ADMIN_TOKEN. Não existem envios automáticos pelo WhatsApp.
+No SQL Server, a tabela `dbo.Customers` mantém identidade, nome, telefone único por floricultura e os opcionais em JSON. Em demo, esse cadastro é independente e fica em memória, sendo perdido ao reiniciar. O script de importação recupera contatos válidos de pedidos antigos sem modificar esses pedidos. Cadastros futuros de clientes feitos apenas na loja pública não são automaticamente incorporados ao diretório nesta versão; o operador pode cadastrá-los pelo painel. As rotas de cadastro e busca exigem sessão autenticada da floricultura. Não existem envios automáticos pelo WhatsApp.
 
 ## Entregas: endereços e destinatários por cliente
 

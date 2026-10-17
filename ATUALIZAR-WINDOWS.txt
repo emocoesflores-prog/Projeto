@@ -1,3 +1,6 @@
+ATENÇÃO — NOVA VERSÃO COM USUÁRIO/SENHA E MÚLTIPLAS FLORICULTURAS
+Leia PLATAFORMA.md antes dos passos antigos abaixo. No modo padrão multi, primeiro faça backup e execute sql/multitenant.sql no banco atual, depois configure o primeiro administrador no painel. Preserve também a pasta .tenants nas próximas atualizações.
+
 ATUALIZAÇÃO — PEDIDOS COMPACTOS, WHATSAPP E FLORZINHA
 
 Você já tem o sistema funcionando. Não é necessário criar outro banco.

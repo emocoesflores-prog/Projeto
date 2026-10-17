@@ -1,6 +1,6 @@
 {
   "name": "projeto",
-  "version": "1.4.1",
+  "version": "2.0.0",
   "description": "Delivery de floricultura com SQL Server",
   "main": "index.js",
   "directories": {
@@ -9,7 +9,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "migrate:platform": "node scripts/migrate-platform.js"
   },
   "repository": {
     "type": "git",

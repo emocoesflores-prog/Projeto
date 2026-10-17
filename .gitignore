@@ -7,3 +7,5 @@ node_modules/
 
 .whatsapp-desk.json
 .whatsapp-desk.json.tmp
+
+.tenants/
