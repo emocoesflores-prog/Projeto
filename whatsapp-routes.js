@@ -17,7 +17,29 @@ function whatsappRoutes(service) {
     if (!parsed.success) return res.status(400).json({ error: 'Escreva uma mensagem de até 4.000 caracteres.' });
     try { res.status(201).json(await service.send(req.params.id, parsed.data.body)); } catch(e) { next(e); }
   });
-  router.use((err,req,res,next) => res.status(err.status === 409 ? 409 : 503).json({ error: err.status === 409 ? err.message : 'WhatsApp indisponível. Confira a conexão antes de tentar novamente.' }));
+  router.use((err,req,res,next) => {
+    if (err.status === 409) return res.status(409).json({ error: err.message });
+    const messages = {
+      chats: ['WA_CHATS_FAILED', 'Não foi possível carregar as conversas. A sessão pode continuar conectada; tente Atualizar conversas.'],
+      messages: ['WA_MESSAGES_FAILED', 'Não foi possível carregar as mensagens desta conversa.'],
+      send: ['WA_SEND_FAILED', 'Não foi possível confirmar o envio. Confira a conversa no celular antes de reenviar.'],
+      disconnect: ['WA_DISCONNECT_FAILED', 'Não foi possível confirmar a desconexão. Confira Aparelhos conectados no celular.'],
+      connect: ['WA_CONNECT_FAILED', 'Não foi possível iniciar a conexão.']
+    };
+    const operation = req.path.endsWith('/messages') ? (req.method === 'POST' ? 'send' : 'messages') : req.path.split('/').pop();
+    const [code, error] = messages[operation] || ['WA_UNAVAILABLE', 'WhatsApp indisponível.'];
+    // Only known API names/categories: never return raw exception text, QR, phone or session data.
+    const raw = String(err.message || '');
+    const api = raw.match(/\b(getChatModel|getChats|getContactModel|getContact|isReadOnly|findImpl|getIsMyContact|markedUnread)\b/);
+    const diagnostic = /target closed|session closed|browser.*disconnected/i.test(raw) ? 'BROWSER_CLOSED'
+      : /execution context.*destroyed|detached.*frame/i.test(raw) ? 'PAGE_RELOADING'
+      : /timeout/i.test(raw) ? 'TIMEOUT'
+      : api ? 'WEB_API_' + api[1]
+      : /evaluation failed|is not a function|cannot read properties/i.test(raw) ? 'WEB_API_ERROR'
+      : 'UNCLASSIFIED';
+    console.error('WhatsApp: ' + code + ' (' + diagnostic + ')');
+    res.status(503).json({ error, code, diagnostic });
+  });
   return router;
 }
 module.exports = whatsappRoutes;
