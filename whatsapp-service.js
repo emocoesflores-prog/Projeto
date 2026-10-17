@@ -81,15 +81,54 @@ function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeout
       if (old) { try { await old.logout(); } finally { await old.destroy(); } }
     },
     async chats() {
-      const chats = await requireReady().getChats();
-      return chats.filter(c => !c.isGroup && /^\d+@c\.us$/.test(c.id._serialized)).sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0,100).map(c => ({ id: c.id._serialized, name: c.name, unread: c.unreadCount, timestamp: c.timestamp }));
+      const current = requireReady();
+      let chats;
+      try {
+        chats = (await current.getChats()).map(c => ({ id: c.id._serialized, name: c.name,
+          unread: c.unreadCount || 0, timestamp: c.timestamp || 0,
+          preview: c.lastMessage?.body || (c.lastMessage?.hasMedia ? '[Anexo]' : ''), archived: !!c.archived }));
+      } catch (error) {
+        if (!current.pupPage) throw error;
+        chats = await current.pupPage.evaluate(require('./whatsapp-compat').readChatSummaries);
+      }
+      return chats.filter(c => /^\d{5,20}@(c\.us|lid)$/.test(c.id))
+        .sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0,200);
     },
     async messages(id) {
-      const chat = await requireReady().getChatById(id);
-      return (await chat.fetchMessages({ limit: 50 })).map(m => ({ id: m.id._serialized, body: m.body, fromMe: m.fromMe, timestamp: m.timestamp, hasMedia: m.hasMedia }));
+      const current = requireReady();
+      let chat;
+      try { chat = await current.getChatById(id); }
+      catch(error) {
+        if (!current.pupPage) throw error;
+        // Chat.fetchMessages retrieves the raw chat, avoiding the broken summary serializer.
+        chat = new (require('whatsapp-web.js').Chat)(current, { id: { _serialized: id }, isGroup: false });
+      }
+      if (!chat) throw Object.assign(new Error('Conversa não encontrada.'), { status: 404 });
+      return (await chat.fetchMessages({ limit: 80 })).map(m => ({ id: m.id._serialized, body: m.body,
+        fromMe: m.fromMe, timestamp: m.timestamp, hasMedia: m.hasMedia, type: m.type, ack: m.ack }));
+    },
+    async resolve(phone) {
+      let digits = phone.replace(/\D/g,'');
+      if (digits.length === 10 || digits.length === 11) digits = '55' + digits;
+      if (!/^\d{10,15}$/.test(digits)) throw Object.assign(new Error('Informe um número com DDD ou código do país.'), { status: 400 });
+      const result = await requireReady().getNumberId(digits);
+      if (!result) throw Object.assign(new Error('Número não encontrado no WhatsApp.'), { status: 404 });
+      return { id: result._serialized, name: digits, unread: 0, timestamp: 0, preview: '', desk: {} };
+    },
+    async media(id, messageId) {
+      const message = await requireReady().getMessageById(messageId);
+      if (!message || ![message.from, message.to].includes(id)) throw Object.assign(new Error('Anexo não encontrado.'), { status: 404 });
+      const media = await message.downloadMedia();
+      if (!media || !media.data || media.data.length > 16 * 1024 * 1024) throw new Error('Anexo indisponível ou grande demais.');
+      return media;
+    },
+    async sendMedia(id, data, mimetype, filename, caption) {
+      const { MessageMedia } = require('whatsapp-web.js');
+      const result = await requireReady().sendMessage(id, new MessageMedia(mimetype, data.toString('base64'), filename), { caption, sendSeen: false });
+      return { id: result.id._serialized };
     },
     async send(id, body) {
-      const result = await requireReady().sendMessage(id, body);
+      const result = await requireReady().sendMessage(id, body, { sendSeen: false });
       return { id: result.id._serialized };
     }
   };

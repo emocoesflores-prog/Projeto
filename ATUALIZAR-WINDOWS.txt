@@ -1,9 +1,9 @@
-ATUALIZAÇÃO 1.4 — ENTREGAS, ENDEREÇOS E HISTÓRICO EMOÇÕES FLORES
+ATUALIZAÇÃO — PEDIDOS COMPACTOS, WHATSAPP E FLORZINHA
 
 Você já tem o sistema funcionando. Não é necessário criar outro banco.
 
 1. No terminal do sistema, pressione Ctrl+C para parar o servidor. Se perguntar se deseja finalizar o arquivo em lotes, confirme com S.
-2. Guarde uma cópia do seu arquivo .env em local privado: ele contém sua senha e chave administrativa. Não compartilhe esse arquivo.
+2. Preserve também a pasta .wwebjs_auth e o arquivo .whatsapp-desk.json (se existir); não os publique ou compartilhe. Guarde uma cópia do seu arquivo .env em local privado: ele contém sua senha e chave administrativa. Não compartilhe esse arquivo.
 3. Baixe o ZIP atualizado do GitHub e extraia em uma pasta temporária.
 4. Abra a pasta extraída que contém server.js e package.json.
 5. Copie os arquivos e pastas dessa pasta para a pasta atual do seu sistema (a mesma onde você executa npm start). Aceite substituir os arquivos do projeto.
@@ -14,8 +14,12 @@ Você já tem o sistema funcionando. Não é necessário criar outro banco.
 8. Abra o terminal na pasta atual do sistema e execute:
 
    npm ci
+   npm install-scripts approve puppeteer
+   npx puppeteer browsers install chrome
    npm test
    npm start
+
+O comando install-scripts approve é necessário somente no npm que pede essa aprovação.
 
 9. Confirme a mensagem: Floricultura iniciada (SQL Server).
 10. No navegador, abra http://localhost:3000/admin.html e pressione Ctrl+F5 para carregar os arquivos novos.
@@ -63,3 +67,14 @@ PRINCIPAIS NOVIDADES
 - Impressão de ficha da produção e cartão do presente separado.
 
 O catálogo ainda é de exemplo e não tem editor/estoque. A consulta SQL continua limitada aos 200 pedidos mais recentes. Mais detalhes no README.md.
+
+ATENDIMENTO E FLORZINHA
+- Use Node.js 24 e preserve no .env o WHATSAPP_BROWSER_PATH com o caminho do Chrome que já conectou no seu computador.
+- WHATSAPP_HEADLESS=true permite trabalhar pelo painel sem janela extra. false mostra a janela para diagnóstico.
+- No painel Atendimento, use Conexão para reconectar a sessão. Ela pode restaurar sem QR Code.
+- Fila com busca, filtros, histórico, respostas rápidas, texto e anexos, notas internas e vínculo manual de pedido.
+- As notas/status/responsáveis ficam em .whatsapp-desk.json, privado no servidor; inclua no backup.
+- Para habilitar a Florzinha, preencha FLORZINHA_API_KEY somente no .env local e reinicie o servidor. FLORZINHA_MODEL=gpt-4.1-mini é o modelo padrão.
+- A chave é da API da OpenAI, com faturamento próprio. Não envie a chave por chat e não a salve no Git.
+- Habilite a Florzinha na conversa, gere uma sugestão, revise e use no compositor. Só o botão Enviar manda a resposta ao cliente.
+- Leia os limites e detalhes de configuração no README.md. A recuperação das conversas reais e a IA precisam ser conferidas na sua máquina após atualizar.

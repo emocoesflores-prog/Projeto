@@ -146,36 +146,62 @@ A versão 1.3 tem 19 testes automatizados, incluindo cadastro obrigatório/opcio
 
 A versão 1.4 tem 25 testes automatizados e validação Chromium de máscaras, popup, número obrigatório, destinatário, múltiplos endereços, seleção em próxima compra, edição, histórico, preservação dos pedidos anteriores, isolamento entre clientes e telas móveis. O preenchimento de CEP foi testado com respostas simuladas do formato ViaCEP, incluindo falha e resposta atrasada. O acesso real ao ViaCEP nesta nuvem respondeu 403/indisponível; foi adicionada a exigência de domínio ao rascunho do ambiente, sem presumir aplicação/publicação. A consulta real de CEP e a persistência SQL devem ser conferidas na máquina local do proprietário após a atualização.
 
-## Atendimento WhatsApp Web
+## Atendimento WhatsApp e Florzinha
 
-O menu **Atendimento WhatsApp** permite conectar um número por QR Code, listar até 100 conversas individuais, consultar as últimas 50 mensagens de uma conversa e enviar texto (até 4.000 caracteres). As conversas são atualizadas a cada cinco segundos enquanto essa tela está aberta. Grupos, envio de anexos, filas e múltiplos atendentes não estão implementados. Não há respostas automáticas nem vínculo automático com pedidos/clientes.
+![Atendimento com dados fictícios e sugestão simulada da Florzinha](docs/atendimento-florzinha.png)
 
-Após baixar esta versão atualizada, execute `npm ci` com Node.js 24. A instalação do Puppeteer baixa o Chrome necessário; se a instalação tiver usado `PUPPETEER_SKIP_DOWNLOAD=true`, execute `npx puppeteer browsers install chrome` ou configure `WHATSAPP_BROWSER_PATH` com o caminho de um Chrome/Chromium instalado. Linux precisa das bibliotecas de sistema e de um sandbox Chromium funcional. A nuvem usada nesta implementação tem Chromium com sandbox incompatível; a conexão real não foi validada nela.
+A imagem usa somente dados fictícios de teste; não mostra mensagens reais.
 
-Execute `npm start`, abra o painel administrativo, entre com seu `ADMIN_TOKEN`, escolha **Atendimento WhatsApp → Conectar WhatsApp** e escaneie o QR em **WhatsApp no celular → Aparelhos conectados → Conectar aparelho**. Aguarde o estado conectado, selecione uma conversa e envie uma mensagem. **Desconectar aparelho** encerra a sessão. Sair do painel apenas encerra o acesso ao painel; a sessão do WhatsApp continua no servidor.
+A área **Atendimento WhatsApp** reúne fila, busca por nome/número/última mensagem, filtros (não lidas, favoritas, em atendimento e concluídas), histórico de até 80 mensagens por conversa, envio de texto e anexos, respostas rápidas e nova conversa por número. A interface tem três colunas: fila, conversa e contexto. A lista carrega até 200 conversas individuais e atualiza automaticamente a cada quatro segundos enquanto essa tela está aberta. Identificadores `@c.us` e `@lid` são aceitos; LID não deve ser interpretado como número de telefone. Grupos, canais e chamadas não são atendidos.
 
-A sessão é guardada em `.wwebjs_auth/` e o cache em `.wwebjs_cache/`, ignorados pelo Git. Esses arquivos concedem acesso à conta: mantenha-os privados e fora de downloads e backups públicos. Use um servidor privado confiável; proteja o painel com HTTPS ao acessar pela rede. O servidor precisa de acesso HTTPS ao WhatsApp Web e seus serviços (`web.whatsapp.com`, `*.whatsapp.com`, `*.whatsapp.net`); uma política de rede restrita pode bloquear a conexão.
+**Informações internas:** etapa, favorito, responsável, notas e vínculo manual a pedido existente são gravados em `.whatsapp-desk.json`, com as últimas 100 alterações de campos por conversa. Esse arquivo é privado, ignorado pelo Git e precisa de backup junto da instalação. Não é uma tabela SQL nem controle de permissões por funcionário. “Criar pedido no PDV” abre o cadastro normal; não copia dados de uma conversa automaticamente nem registra pedido sozinho. A lista de pedidos usa os registros já carregados no painel. As respostas rápidas são textos iniciais editáveis no compositor antes do envio.
 
-Esta integração usa `whatsapp-web.js`, não é uma API oficial da Meta e pode parar de funcionar com alterações do WhatsApp ou sofrer restrições da plataforma. A suíte automatizada valida serviço e rotas com cliente simulado; recebimento e envio reais precisam ser conferidos após conectar uma conta pelo QR Code. Se um envio falhar, confira no celular antes de reenviar para evitar duplicatas.
+**Arquivos:** envio de imagem JPEG/PNG/WebP, PDF, áudio MP3/OGG/M4A e vídeo MP4 de até 8 MB; o operador confirma o destinatário antes do envio. Anexos recebidos podem ser baixados (até aproximadamente 12 MB) e abertos no aplicativo apropriado. Não há gravação de voz, visualizador de mídia embutido ou chamadas. Nenhum arquivo ou mensagem é enviado automaticamente. Em caso de erro de envio, confira no celular antes de repetir para evitar duplicatas. Status de entrega/leitura depende dos dados retornados pelo WhatsApp.
 
-### Correção das dependências do navegador
+### Instalar ou atualizar no Windows
 
-O projeto fixa Puppeteer 25.14.0 por `overrides` para substituir a versão 24.38.0 exigida pela biblioteca WhatsApp, cuja cadeia de download inclui `extract-zip` e `basic-ftp` vulneráveis. Esta combinação requer Node.js 24 conforme o restante do projeto. A instalação limpa, os 27 testes e o carregamento CommonJS/Client/LocalAuth e APIs de inicialização do Chromium foram verificados. A conexão com conta real continua pendente pelos bloqueios de rede e sandbox documentados acima. Não use `npm audit fix --force`: a sugestão observada rebaixava o WhatsApp para 1.34.2.
-
-No Windows, após baixar esta atualização, preserve seu `.env` e execute na pasta do projeto:
+Use Node.js 24 e preserve seu `.env`, `.wwebjs_auth/` e `.whatsapp-desk.json`. Pare o servidor antes de substituir os arquivos do projeto pela versão baixada. Não apague tabelas nem recrie o banco. Depois execute na pasta do projeto:
 
 ```bat
 npm ci
 npm install-scripts approve puppeteer
 npx puppeteer browsers install chrome
-npm audit
+npm test
 npm start
 ```
 
-O comando `install-scripts approve` aplica-se ao npm que apresenta essa solicitação de aprovação; versões sem esse comando não precisam dessa etapa. A instalação explícita do Chrome é útil quando o download automático foi bloqueado. Nesta atualização, `npm audit` retornou zero vulnerabilidades conhecidas. Os avisos de descontinuação de `glob` e `fluent-ffmpeg` ainda vêm de dependências transitivas e não significam falha de instalação. Atualizações futuras podem mudar o resultado da auditoria.
+`install-scripts approve` é necessário somente no npm que solicita essa aprovação. `npm ci` não altera seu `.env`. A integração usa Puppeteer 25.14.0 por override para remover a cadeia vulnerável da versão anterior; Node.js 24 é necessário. `npm audit fix --force` não é recomendado: a sugestão anterior rebaixava a biblioteca WhatsApp. Avisos de descontinuação transitivos de glob/fluent-ffmpeg ainda podem aparecer.
 
-### Sessão vinculada que fica iniciando
+Neste computador Windows, o usuário conseguiu conectar usando o Chrome instalado. Se necessário, configure no `.env`, conferindo o caminho real:
 
-A sessão salva pode ser restaurada sem um novo QR Code. A configuração usa a página atual do WhatsApp Web (`webVersionCache: none`) e a identificação real do Chrome (`userAgent: false`), evitando reutilizar HTML antigo e o identificador Chrome 101 padrão da biblioteca. Isso não apaga `.wwebjs_auth` nem desconecta o celular.
+```env
+WHATSAPP_BROWSER_PATH="C:\Program Files\Google\Chrome\Application\chrome.exe"
+WHATSAPP_HEADLESS=true
+```
 
-Para diagnosticar no Windows, pare o servidor com Ctrl+C, acrescente `WHATSAPP_HEADLESS=false` ao `.env` existente e execute `npm start`. Clique em Conectar WhatsApp e examine a janela do Chrome aberta pelo sistema. Não abra manualmente outra janela com o mesmo perfil. Informe apenas o texto da tela; não compartilhe QR Codes, mensagens ou dados de clientes. Após a correção, volte a `WHATSAPP_HEADLESS=true` e reinicie o servidor. A autenticação também tem limite de espera; excedê-lo fecha o navegador sem executar logout nem apagar a sessão. As verificações automatizadas não substituem o teste com uma conta real.
+O valor `false` em `WHATSAPP_HEADLESS` abre a janela do navegador para diagnóstico; `true` mantém o atendimento no painel, sem janela visível. No painel, abra **Conexão → Conectar WhatsApp**. Se for solicitado, escaneie o QR em **WhatsApp no celular → Aparelhos conectados**. Uma sessão já salva pode reconectar sem novo QR. A aplicação usa a página atual do WhatsApp, sem HTML antigo em cache e sem se identificar como Chrome 101. Não abra manualmente outro Chrome com o perfil do sistema.
+
+A sessão em `.wwebjs_auth` permite acesso à conta. Proteja-a, não a envie por chat e não a inclua em downloads públicos. Sair do painel não desconecta o aparelho; **Desconectar aparelho** encerra o vínculo. A aplicação não solicita tokens de WhatsApp em chat. Uma falha em grupos na serialização da biblioteca pode impedir `getChats`; nesse caso, a integração lê resumos das conversas individuais diretamente na mesma página autenticada. Essa compatibilidade depende de APIs internas do WhatsApp e pode mudar.
+
+### Habilitar a Florzinha
+
+A **Florzinha** gera sugestões de resposta ao clicar no botão; o operador revisa, edita e envia. Não há disparo automático, robô respondendo sozinho ou envio em massa. A chave é da API da OpenAI, com faturamento próprio; uma assinatura do ChatGPT não fornece essa chave. Preencha somente no `.env` local do servidor (nunca no Git ou no chat):
+
+```env
+FLORZINHA_API_KEY=
+FLORZINHA_MODEL=gpt-4.1-mini
+```
+
+Reinicie o servidor após configurar. Selecione uma conversa, habilite **Florzinha** na coluna direita e clique em **Sugerir com Florzinha**. Use **Editar e usar resposta** para colocar a sugestão no compositor; somente **Enviar** transmite a resposta ao WhatsApp. Até 30 mensagens de texto são enviadas à API para gerar a sugestão, com `store: false`. Anexos, notas internas e registros de pedidos não são enviados ao provedor por esse fluxo. A geração exige conexão HTTPS a `api.openai.com`, chave válida e saldo/permissão no provedor. Sem chave, o atendimento manual continua funcionando.
+
+### Validação e limites
+
+A interface e as rotas foram validadas com conversas e provedor de IA simulados, incluindo recuperação de falha de serialização, IDs LID, envio, anexos, persistência, habilitação da Florzinha, isolamento de rascunhos e layout móvel. A geração real da IA não foi executada nesta nuvem por falta de chave. O usuário confirmou a vinculação do WhatsApp no Windows; a recuperação da listagem com esta atualização ainda precisa ser conferida nessa máquina. Não se presume que testes simulados confirmem mensagens reais recebidas/enviadas.
+
+A biblioteca whatsapp-web.js é uma integração não oficial, sujeita a alterações e restrições do WhatsApp. Para acesso ao painel pela rede, use HTTPS e mantenha a chave administrativa privada. Não há integração Instagram/Messenger/e-mail, métricas financeiras do atendimento, envio automático de IA ou login/permissão por atendente nesta versão. A nuvem de preparação tem restrições de navegador/rede documentadas no histórico; não presuma que a conexão local valida a nuvem.
+
+## Painel de pedidos compacto
+
+A área **Pedidos** segue o formato de operação da referência: linhas compactas em duas colunas, indicador de modalidade, horário e tempo desde a criação, faixas de status coloridas, filtros no topo e detalhe fixo à direita. O primeiro pedido é selecionado automaticamente. **Ajustar layout** alterna entre duas colunas e lista; em telas menores, a interface se reorganiza para manter a leitura. **Gestão de entregas** abre a agenda existente, sem inventar um módulo de roteirização. As etapas, confirmação manual de recebimento, conferências e validações do servidor foram preservadas.
+
+![Pedidos em duas colunas, com dados fictícios de teste](docs/pedidos-compactos.png)
