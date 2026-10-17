@@ -1,3 +1,10 @@
+ATUALIZAÇÃO DE ACESSOS — PÁGINAS SEPARADAS
+Gestão Inova: /inova.html
+Painel Floricultura Emoções Flores: /painel/emocoes-flores
+Site Floricultura Emoções Flores: /loja/emocoes-flores
+Cada nova floricultura recebe links /painel/<slug> e /loja/<slug>, exibidos no cadastro da Inova.
+Se já aplicou a migração da versão 2.0, esta atualização de páginas não exige outra migração. Use os mesmos usuários e senhas. Os dois portais terão sessões separadas, então entre novamente após atualizar.
+
 ATENÇÃO — NOVA VERSÃO COM USUÁRIO/SENHA E MÚLTIPLAS FLORICULTURAS
 Leia PLATAFORMA.md antes dos passos antigos abaixo. No modo padrão multi, primeiro faça backup e execute sql/multitenant.sql no banco atual, depois configure o primeiro administrador no painel. Preserve também a pasta .tenants nas próximas atualizações.
 

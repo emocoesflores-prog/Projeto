@@ -15,7 +15,7 @@ async function migrate(){
   const checked=(await pool.request().query("SELECT OBJECT_ID(N'dbo.AppUsers',N'U') AS usersTable,OBJECT_ID(N'dbo.AppSessions',N'U') AS sessionsTable,COL_LENGTH(N'dbo.Orders',N'tenantId') AS ordersTenant,COL_LENGTH(N'dbo.Customers',N'tenantId') AS customersTenant,(SELECT COUNT(*) FROM dbo.Tenants WHERE id='00000000-0000-4000-8000-000000000001') AS originalStore,(SELECT COUNT(*) FROM dbo.Tenants WHERE id='00000000-0000-4000-8000-000000000002') AS platformCompany")).recordset[0];
   if(!checked.usersTable||!checked.sessionsTable||!checked.ordersTenant||!checked.customersTenant||checked.originalStore!==1||checked.platformCompany!==1)throw Error('A verificação final do esquema não foi concluída. Confira o banco antes de iniciar.');
   console.log('Migração da plataforma aplicada. Pedidos e clientes existentes preservados e loja original confirmada.');
-  console.log('Configure AUTH_MODE=multi no .env, execute npm start e cadastre o administrador principal em /admin.html.');
+  console.log('Configure AUTH_MODE=multi no .env, execute npm start e cadastre o administrador principal em /inova.html.');
  }finally{await pool.close();}
 }
 if(require.main===module)migrate().catch(error=>{if(error.code)console.error('Não foi possível aplicar a migração ('+error.code+'). Confira acesso, conexão e permissão para alterar o esquema no SQL Server.');else console.error(error.message);process.exitCode=1;});

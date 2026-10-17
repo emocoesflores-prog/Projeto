@@ -23,7 +23,9 @@ npm start
 Com o processo ativo, abra na própria máquina:
 
 - Loja: `http://localhost:3000`
-- Administração: `http://localhost:3000/admin.html`
+- Gestão Inova: `http://localhost:3000/inova.html`
+- Administração da floricultura: `http://localhost:3000/painel/emocoes-flores`
+- Site da floricultura: `http://localhost:3000/loja/emocoes-flores`
 
 O painel da plataforma usa usuário e senha. `ADMIN_TOKEN` é usado apenas na configuração inicial do administrador principal. Para migrar e cadastrar outras lojas, siga [PLATAFORMA.md](PLATAFORMA.md). O `.env` não deve ser enviado ao GitHub. Em demonstração, pedidos e mudanças de frete ficam em memória e desaparecem ao reiniciar. Não use dados pessoais reais nesse modo. Para atualizar uma instalação existente, siga **ATUALIZAR-WINDOWS.txt**; preserve seu `.env`.
 

@@ -1,3 +1,15 @@
+# Três acessos separados
+
+- **Gestão Inova Facil:** `/inova.html` — cadastro de floriculturas e gestão de seus acessos; login da Inova por CNPJ e senha.
+- **Painel de cada floricultura:** `/painel/<slug>` — pedidos, clientes, catálogo, configurações e atendimento WhatsApp, com usuário/senha da própria loja.
+- **Site público de cada floricultura:** `/loja/<slug>` — catálogo e pedidos dos clientes.
+
+Para a Floricultura Emoções Flores, use `/painel/emocoes-flores` e `/loja/emocoes-flores`. Outras lojas recebem seus próprios links pelo endereço (slug) definido no cadastro. A gestão mostra ambos os links em cada loja. O atalho antigo `/admin.html` continua disponível e encaminha o usuário autenticado para o painel da própria loja.
+
+As sessões da Inova e da floricultura usam cookies separados: podem permanecer abertas em abas diferentes, com saída independente. Um usuário de loja não entra pela gestão da Inova; o acesso da Inova não entra pela página operacional. Nos links individuais, o login e as requisições conferem a loja indicada no endereço.
+
+Esta atualização de páginas e sessões não muda o esquema do banco. Quem já aplicou a migração da versão 2.0 não precisa executá-la novamente, e os usuários/senhas existentes continuam válidos.
+
 # Plataforma de floriculturas
 
 O modo `AUTH_MODE=multi` usa usuário e senha e separa as lojas no servidor. A empresa gestora é **Inova Facil Consultoria e Solucoes em Tecnologia Ltda - ME**, com login principal pelo CNPJ **53.770.070/0001-95** (com ou sem pontuação) e senha. O WhatsApp **(11) 96633-3900** é seu contato. O cadastro da empresa gestora é separado da loja **Floricultura Emoções Flores**, cujos dados antigos são preservados. O administrador principal usa o menu **Floriculturas** para gerenciar os estabelecimentos. O responsável de uma loja acessa somente a operação dessa loja.
@@ -9,7 +21,7 @@ O modo `AUTH_MODE=multi` usa usuário e senha e separa as lojas no servidor. A e
 3. Com o servidor parado, execute `npm run migrate:platform` na pasta atual do sistema. Ele usa as credenciais SQL do seu `.env`, confere o banco e verifica a preservação da quantidade de pedidos/clientes. A conta SQL precisa de permissão para alterar o esquema. Se a conta da aplicação não tiver essa permissão, no SSMS selecione **o banco atual** e execute `sql/multitenant.sql` com sua conta administrativa; não conceda privilégios permanentes extras à aplicação. O script não troca de banco: atribui os pedidos e clientes antigos à Floricultura Emoções Flores, preserva seus registros e cria as tabelas de lojas, usuários e sessões. Não execute os outros scripts de importação novamente em uma instalação já migrada.
 4. No `.env`, mantenha `DATA_MODE=sqlserver` e as credenciais SQL atuais. Adicione `AUTH_MODE=multi` e `COOKIE_SECURE=false` para localhost. `ADMIN_TOKEN` deve conter uma chave privada de pelo menos 16 caracteres, preferencialmente 32 ou mais; ela serve somente para criar o primeiro administrador, não para entrar normalmente.
 5. Execute `npm ci` e `npm start`. Se seu npm pedir aprovação do Puppeteer, execute `npm install-scripts approve puppeteer` e `npx puppeteer browsers install chrome` antes de iniciar. Preserve o caminho do Chrome instalado que já funciona em `WHATSAPP_BROWSER_PATH`.
-6. Abra `/admin.html` e pressione Ctrl+F5. Na primeira configuração, informe a chave `ADMIN_TOKEN`, o nome da empresa gestora, o CNPJ de login já sugerido e uma senha com no mínimo 12 caracteres. Essa etapa só funciona enquanto não há usuário cadastrado. Depois, o acesso usa apenas usuário e senha.
+6. Abra `/inova.html` para a gestão da Inova Facil e pressione Ctrl+F5. Na primeira configuração, informe a chave `ADMIN_TOKEN`, o nome da empresa gestora, o CNPJ de login já sugerido e uma senha com no mínimo 12 caracteres. Essa etapa só funciona enquanto não há usuário cadastrado. Depois, o acesso usa apenas usuário e senha.
 7. Entre em **Floriculturas**. A **Floricultura Emoções Flores** já estará cadastrada com seus dados antigos; use **Criar acesso** nela para cadastrar o responsável pela operação dessa loja. O login principal da empresa gestora administra as lojas; para operar pedidos/WhatsApp, entre com o acesso da floricultura. Cadastre o nome completo da loja, endereço público (slug), informações de contato, região de entrega, nome da assistente e usuário/senha do responsável. Compartilhe essas credenciais por um canal privado. A loja pública terá o endereço `/loja/slug-da-loja`.
 
 A conta SQL usada pelo aplicativo precisa de SELECT/INSERT/UPDATE nas tabelas e DELETE em `dbo.AppSessions`, para revogar sessões; o usuário que aplica a migração pode ser diferente do usuário da aplicação. Não é preciso manter permissão de alteração do esquema no aplicativo.
