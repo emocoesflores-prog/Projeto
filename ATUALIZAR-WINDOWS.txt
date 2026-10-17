@@ -100,3 +100,9 @@ MENU LATERAL E NOVA SESSÃO APÓS SAIR PELO CELULAR
 Use ☰ / « no topo do menu para expandir ou recolher. A escolha fica salva neste navegador e vale para todas as telas. No celular, o menu expandido aparece sobre o conteúdo.
 
 Ao encerrar o vínculo em Aparelhos conectados no celular, o sistema encerra o navegador da sessão antiga antes de liberar Conectar WhatsApp. Durante esse encerramento, os botões ficam temporariamente indisponíveis. Se o navegador não puder fechar, o painel informa o erro e permite tentar Desconectar aparelho novamente.
+
+ESTADO DA CONEXÃO EM TEMPO REAL
+
+O atendimento recebe eventos autenticados do servidor para atualizar conexão, QR e logout sem esperar a consulta de conversas. Ao sair pelo celular, a conversa é desabilitada ao receber a notificação do WhatsApp. A limpeza de arquivos antigos não bloqueia a reconexão: a próxima sessão usa um perfil novo. A pasta .wwebjs_auth continua necessária para restaurar a sessão após reiniciar o servidor.
+
+O botão Conectar é liberado depois que o navegador antigo encerra, mantendo uma única sessão ativa. O recebimento da notificação e a confirmação do logout no celular dependem da rede e do WhatsApp; nenhuma atualização local consegue garantir tempo zero no serviço externo.

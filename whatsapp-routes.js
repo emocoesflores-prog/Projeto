@@ -3,6 +3,14 @@ const { z } = require('zod');
 function whatsappRoutes(service, desk = require('./whatsapp-desk-store').createDeskStore(), florzinha = require('./florzinha').createFlorzinha()) {
   const router = express.Router();
   router.use((req,res,next) => { res.set('Cache-Control','no-store'); next(); });
+  router.get('/events',(req,res)=>{
+    if(!service.subscribe)return res.sendStatus(204);
+    res.set({'Content-Type':'text/event-stream','Cache-Control':'no-store','Connection':'keep-alive','X-Accel-Buffering':'no'});res.flushHeaders();
+    const send=state=>res.write('data: '+JSON.stringify({...state,aiConfigured:florzinha.configured()})+'\n\n');
+    const unsubscribe=service.subscribe(send);send(service.status());
+    const heartbeat=setInterval(()=>res.write(': heartbeat\n\n'),15000);heartbeat.unref?.();
+    req.on('close',()=>{clearInterval(heartbeat);unsubscribe();});
+  });
   router.get('/status', async (req,res,next) => { try { const state = service.refreshStatus ? await service.refreshStatus() : service.status(); res.json({ ...state, aiConfigured: florzinha.configured() }); } catch(e) { next(e); } });
   router.post('/connect', async (req,res,next) => { try { await service.connect(); res.status(202).json(service.status()); } catch(e) { next(e); } });
   router.post('/disconnect', async (req,res,next) => { try { await service.disconnect(); res.json(service.status()); } catch(e) { next(e); } });
