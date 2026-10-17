@@ -71,6 +71,7 @@ app.use('/api/admin',(req,res,next)=>{
  if(!expected||Buffer.byteLength(given)!==Buffer.byteLength(expected)||!timingSafeEqual(Buffer.from(given),Buffer.from(expected)))return res.status(401).json({error:'Acesso não autorizado'});
  next();
 });
+app.use('/api/admin/whatsapp', require('./whatsapp-routes')(require('./whatsapp-service').createWhatsAppService()));
 app.get('/api/admin/cep/:cep',async(req,res,next)=>{try{res.json(await lookupCep(req.params.cep))}catch(error){next(error)}});
 app.get('/api/admin/customers/:id/addresses',async(req,res,next)=>{try{
  if(!z.uuid().safeParse(req.params.id).success)throw new OrderError('Cliente inválido.',400);
