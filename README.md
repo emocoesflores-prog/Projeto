@@ -157,3 +157,19 @@ Execute `npm start`, abra o painel administrativo, entre com seu `ADMIN_TOKEN`, 
 A sessão é guardada em `.wwebjs_auth/` e o cache em `.wwebjs_cache/`, ignorados pelo Git. Esses arquivos concedem acesso à conta: mantenha-os privados e fora de downloads e backups públicos. Use um servidor privado confiável; proteja o painel com HTTPS ao acessar pela rede. O servidor precisa de acesso HTTPS ao WhatsApp Web e seus serviços (`web.whatsapp.com`, `*.whatsapp.com`, `*.whatsapp.net`); uma política de rede restrita pode bloquear a conexão.
 
 Esta integração usa `whatsapp-web.js`, não é uma API oficial da Meta e pode parar de funcionar com alterações do WhatsApp ou sofrer restrições da plataforma. A suíte automatizada valida serviço e rotas com cliente simulado; recebimento e envio reais precisam ser conferidos após conectar uma conta pelo QR Code. Se um envio falhar, confira no celular antes de reenviar para evitar duplicatas.
+
+### Correção das dependências do navegador
+
+O projeto fixa Puppeteer 25.14.0 por `overrides` para substituir a versão 24.38.0 exigida pela biblioteca WhatsApp, cuja cadeia de download inclui `extract-zip` e `basic-ftp` vulneráveis. Esta combinação requer Node.js 24 conforme o restante do projeto. A instalação limpa, os 27 testes e o carregamento CommonJS/Client/LocalAuth e APIs de inicialização do Chromium foram verificados. A conexão com conta real continua pendente pelos bloqueios de rede e sandbox documentados acima. Não use `npm audit fix --force`: a sugestão observada rebaixava o WhatsApp para 1.34.2.
+
+No Windows, após baixar esta atualização, preserve seu `.env` e execute na pasta do projeto:
+
+```bat
+npm ci
+npm install-scripts approve puppeteer
+npx puppeteer browsers install chrome
+npm audit
+npm start
+```
+
+O comando `install-scripts approve` aplica-se ao npm que apresenta essa solicitação de aprovação; versões sem esse comando não precisam dessa etapa. A instalação explícita do Chrome é útil quando o download automático foi bloqueado. Nesta atualização, `npm audit` retornou zero vulnerabilidades conhecidas. Os avisos de descontinuação de `glob` e `fluent-ffmpeg` ainda vêm de dependências transitivas e não significam falha de instalação. Atualizações futuras podem mudar o resultado da auditoria.
