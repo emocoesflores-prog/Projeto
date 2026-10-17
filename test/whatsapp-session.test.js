@@ -19,3 +19,21 @@ test('Disconnect bounds a hanging logout, closes Chrome before cleanup, and bloc
 });
 test('Stopping server preserves authenticated session without logout',async()=>{const client=new EventEmitter();let destroyed=0;client.initialize=async()=>{};client.destroy=async()=>destroyed++;client.logout=async()=>assert.fail('must preserve session');const service=createWhatsAppService({clientFactory:()=>client});await service.connect();client.emit('ready');await service.close();assert.equal(destroyed,1);});
 test('A browser that cannot close reports failure and prevents another connection',async()=>{const client=new EventEmitter();let factories=0;client.initialize=async()=>{};client.logout=async()=>{};client.destroy=()=>new Promise(()=>{});client.pupBrowser={isConnected:()=>true};const service=createWhatsAppService({clientFactory:()=>{factories++;return client},shutdownTimeoutMs:10});await service.connect();client.emit('ready');await assert.rejects(service.disconnect(),/ainda não encerrou/);assert.equal(service.status().canConnect,false);await service.connect();assert.equal(factories,1);});
+test('Logout pelo celular libera navegador e permite nova sessão com QR sem reiniciar servidor',async()=>{
+ const clients=[],steps=[];let finishClose;
+ const service=createWhatsAppService({qrEncoder:async()=> 'data:image/png;base64,new',clientFactory:()=>{
+  const c=new EventEmitter();let alive=true;c.initialize=async()=>{};c.pupBrowser={isConnected:()=>alive};c.authStrategy={logout:async()=>steps.push('mark'),cleanup:async()=>{assert.equal(alive,false);steps.push('clean');return true}};
+  c.destroy=async()=>{await new Promise(r=>finishClose=r);alive=false;steps.push('close')};clients.push(c);return c;
+ }});
+ await service.connect();clients[0].emit('ready');clients[0].emit('disconnected','LOGOUT');clients[0].emit('disconnected','LOGOUT');
+ assert.equal(service.status().status,'disconnecting');assert.equal(service.status().canConnect,false);await service.connect();assert.equal(clients.length,1);
+ await new Promise(setImmediate);finishClose();await new Promise(setImmediate);
+ assert.deepEqual(steps,['mark','close','clean']);assert.equal(service.status().canConnect,true);assert.equal(service.status().canDisconnect,false);
+ await service.connect();assert.equal(clients.length,2);clients[0].emit('ready');assert.equal(service.status().status,'starting');clients[1].emit('qr','new-secret');await new Promise(setImmediate);assert.equal(service.status().status,'qr');assert.match(service.status().qr,/new/);
+});
+test('Falha ao fechar após logout remoto informa erro e permite tentar desconectar novamente',async()=>{
+ const c=new EventEmitter();let fails=true;c.initialize=async()=>{};c.pupBrowser={isConnected:()=>fails};c.authStrategy={logout:async()=>{},cleanup:async()=>true};c.destroy=async()=>{if(fails)throw Error('locked')};c.logout=async()=>{};
+ const service=createWhatsAppService({clientFactory:()=>c});await service.connect();c.emit('ready');c.emit('disconnected');await new Promise(setImmediate);
+ assert.equal(service.status().status,'error');assert.equal(service.status().canDisconnect,true);assert.equal(service.status().canConnect,false);
+ fails=false;await service.disconnect();assert.equal(service.status().canConnect,true);
+});

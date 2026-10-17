@@ -1,0 +1,25 @@
+/* The same menu state applies to every administrative screen. */
+.dashboard .sidebar{position:fixed!important;inset:0 auto 0 0!important;display:flex!important;flex-direction:column!important;overflow-y:auto;overflow-x:hidden;padding-top:12px!important;z-index:25;box-sizing:border-box}
+.dashboard #sidebar-toggle{display:block;flex-shrink:0;align-self:flex-end;width:38px;height:36px;margin:0 5px 12px;background:transparent;border:1px solid #b9aab7;border-radius:8px;color:inherit;cursor:pointer;font:22px Arial}
+.dashboard #sidebar-toggle:focus-visible{outline:2px solid #21c063;outline-offset:2px}
+.dashboard.sidebar-collapsed .sidebar{width:68px!important;padding-left:8px!important;padding-right:8px!important}
+.dashboard.sidebar-collapsed .dashboard-shell{margin-left:68px!important}
+.dashboard.sidebar-collapsed .sidebar .brand{font-size:0!important;display:block!important;text-align:center}
+.dashboard.sidebar-collapsed .sidebar .brand:before{content:'✿';font:32px Arial;color:#bc77a2}
+.dashboard.sidebar-collapsed .sidebar .brand i,.dashboard.sidebar-collapsed .sidebar .store-label,.dashboard.sidebar-collapsed .sidebar .nav-label,.dashboard.sidebar-collapsed .sidebar-bottom,.dashboard.sidebar-collapsed .sidebar nav button span{display:none!important}
+.dashboard.sidebar-collapsed .sidebar nav{display:flex!important;flex-direction:column;align-items:center;gap:10px;margin:20px 0 0!important;overflow:visible}
+.dashboard.sidebar-collapsed .sidebar nav button{width:46px!important;height:46px!important;flex-shrink:0;padding:0!important;margin:0!important;display:grid!important;place-items:center;border-radius:50%;font-size:21px!important}
+.dashboard.sidebar-expanded .sidebar{width:250px!important;padding-left:14px!important;padding-right:14px!important}
+.dashboard.sidebar-expanded .dashboard-shell{margin-left:250px!important}
+.dashboard.sidebar-expanded .sidebar .brand{font-size:24px!important;display:block!important;white-space:nowrap}
+.dashboard.sidebar-expanded .sidebar .brand:before{content:none!important}
+.dashboard.sidebar-expanded .sidebar .brand i{display:inline!important}
+.dashboard.sidebar-expanded .sidebar .store-label,.dashboard.sidebar-expanded .sidebar .nav-label,.dashboard.sidebar-expanded .sidebar-bottom{display:block!important}
+.dashboard.sidebar-expanded .sidebar nav{display:block!important;overflow:visible;margin:12px 0!important}
+.dashboard.sidebar-expanded .sidebar nav button{width:100%!important;height:auto!important;display:flex!important;align-items:center;gap:10px;padding:12px!important;margin:5px 0!important;border-radius:8px;font-size:14px!important;text-align:left}
+.dashboard.sidebar-expanded .sidebar nav button span{display:inline!important;white-space:normal}
+.dashboard.sidebar-expanded .sidebar .sidebar-bottom{margin-top:auto}
+.dashboard.whatsapp-mode #sidebar-toggle{color:var(--wa-text);border-color:var(--wa-line)}
+.dashboard.whatsapp-mode.sidebar-expanded .sidebar .brand{color:var(--wa-text)}
+@media(max-width:760px){.dashboard.sidebar-expanded .dashboard-shell{margin-left:68px!important}.dashboard.sidebar-expanded .sidebar{box-shadow:8px 0 25px #0004}.dashboard.sidebar-expanded .sidebar nav button{min-height:44px}}
+@media(max-width:760px){.dashboard .dashboard-topbar{height:auto;min-height:60px;flex-wrap:wrap;gap:8px;padding:10px 14px}.dashboard .dashboard-topbar>div{gap:8px;flex-wrap:wrap}.dashboard .dashboard-topbar .pill{white-space:normal}.dashboard .orders-secondary-filters{flex-wrap:wrap}}

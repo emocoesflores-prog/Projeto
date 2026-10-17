@@ -15,9 +15,24 @@ function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeout
   const browserAlive = () => !!(client?.pupBrowser?.isConnected?.() || (client?.pupPage && !client.pupPage.isClosed?.()));
   const canConnect = () => !stopping && !starting && !browserAlive() && !['starting','qr','authenticated','syncing','ready'].includes(state.status);
   const canDisconnect = () => !stopping && !!client && state.status !== 'disconnected' && (browserAlive() || !['error'].includes(state.status));
+  function releaseEndedSession(clearSession=true) {
+    if(stopping||!client)return stopping;
+    const old=client;++generation;starting=null;clearTimeout(startupTimer);
+    state={status:'disconnecting',qr:null,error:'Encerrando a sessão anterior…'};
+    stopping=Promise.resolve().then(async()=>{
+      // Remote logout can leave Chrome alive, holding the old profile.
+      if(clearSession&&old.authStrategy?.logout)await bounded(()=>old.authStrategy.logout());
+      await bounded(()=>old.destroy());
+      if(old.pupBrowser?.isConnected?.())throw Error('WA_BROWSER_STILL_OPEN');
+      client=null;
+      let cleaned=true;try{if(old.authStrategy?.cleanup)cleaned=await old.authStrategy.cleanup();}catch{cleaned=false;}
+      state={status:'disconnected',qr:null,error:cleaned?'Sessão encerrada. Você já pode conectar novamente.':'Sessão encerrada. A limpeza dos arquivos será repetida ao conectar.'};
+    }).catch(()=>{state={status:'error',qr:null,error:'Não foi possível encerrar o navegador anterior. Tente Desconectar aparelho novamente; se persistir, feche a janela aberta pelo sistema.'};}).finally(()=>{stopping=null;});
+    return stopping;
+  }
   async function refreshStatus() {
     if (stopping) return { ...state, canConnect:false, canDisconnect:false };
-    if (client?.pupPage?.isClosed?.() && state.status !== 'disconnected') { ++generation; starting = null; clearTimeout(startupTimer); state = { status:'disconnected', qr:null, error:'A conexão do WhatsApp foi encerrada.' }; }
+    if (client?.pupPage?.isClosed?.() && state.status !== 'disconnected') { await releaseEndedSession(false); }
     if (!client?.pupPage || state.status === 'disconnected') return { ...state, canConnect: canConnect(), canDisconnect: canDisconnect() };
     if (probing) { await probing; return { ...state, canConnect: canConnect(), canDisconnect: canDisconnect() }; }
     const current = generation, active = client;
@@ -99,7 +114,7 @@ function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeout
         client.on('authenticated', () => { if (generation === current) { state = { status: 'authenticated', qr: null, error: null }; armTimeout(); } });
         client.on('ready', () => { if (generation === current) { clearTimeout(startupTimer); state = { status: 'ready', qr: null, error: null }; } });
         for (const event of ['auth_failure', 'disconnected']) client.on(event, () => {
-          if (generation === current) state = { status: 'disconnected', qr: null, error: 'Conexão encerrada. Conecte novamente.' };
+          if (generation === current) releaseEndedSession();
         });
         starting = Promise.resolve(client.initialize()).catch(error => {
           if (generation === current) { clearTimeout(startupTimer); state = { status: browserAlive() ? 'syncing' : 'error', qr: null, error: browserAlive() ? 'WhatsApp aberto. Recuperando o acesso ao atendimento do painel…' : failureMessage(error) }; }

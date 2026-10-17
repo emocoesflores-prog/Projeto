@@ -94,3 +94,9 @@ Se o terminal mostrou EBUSY e voltou ao prompt, o servidor encerrou: por isso ap
 A versão atualizada fecha o navegador antes de limpar a sessão e repete a limpeza de arquivos bloqueados na próxima conexão. O encerramento tem limite de espera e informa quando não foi possível fechar o navegador. Parar o servidor com Ctrl+C fecha o navegador sem solicitar logout.
 
 No topo do Atendimento, use Tema claro / Tema escuro. A escolha fica salva neste navegador e afeta somente a área de atendimento.
+
+MENU LATERAL E NOVA SESSÃO APÓS SAIR PELO CELULAR
+
+Use ☰ / « no topo do menu para expandir ou recolher. A escolha fica salva neste navegador e vale para todas as telas. No celular, o menu expandido aparece sobre o conteúdo.
+
+Ao encerrar o vínculo em Aparelhos conectados no celular, o sistema encerra o navegador da sessão antiga antes de liberar Conectar WhatsApp. Durante esse encerramento, os botões ficam temporariamente indisponíveis. Se o navegador não puder fechar, o painel informa o erro e permite tentar Desconectar aparelho novamente.
