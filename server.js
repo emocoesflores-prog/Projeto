@@ -71,7 +71,8 @@ app.use('/api/admin',(req,res,next)=>{
  if(!expected||Buffer.byteLength(given)!==Buffer.byteLength(expected)||!timingSafeEqual(Buffer.from(given),Buffer.from(expected)))return res.status(401).json({error:'Acesso não autorizado'});
  next();
 });
-app.use('/api/admin/whatsapp', require('./whatsapp-routes')(require('./whatsapp-service').createWhatsAppService()));
+const whatsappService = require('./whatsapp-service').createWhatsAppService();
+app.use('/api/admin/whatsapp', require('./whatsapp-routes')(whatsappService));
 app.get('/api/admin/cep/:cep',async(req,res,next)=>{try{res.json(await lookupCep(req.params.cep))}catch(error){next(error)}});
 app.get('/api/admin/customers/:id/addresses',async(req,res,next)=>{try{
  if(!z.uuid().safeParse(req.params.id).success)throw new OrderError('Cliente inválido.',400);
@@ -120,7 +121,10 @@ async function start(){
   const check=await pool.request().query("SELECT OBJECT_ID(N'dbo.Customers',N'U') AS customerTable");
   if(!check.recordset[0].customerTable)throw new Error('Cadastro de clientes ainda não instalado. No SSMS, selecione Floricultura e execute sql/customers.sql com uma conta autorizada. Depois inicie novamente.');
  }
- app.listen(process.env.PORT||3000,()=>console.log(`Floricultura iniciada (${demo?'DEMONSTRAÇÃO SEM PERSISTÊNCIA':'SQL Server'})`));
+ const httpServer=app.listen(process.env.PORT||3000,()=>console.log(`Floricultura iniciada (${demo?'DEMONSTRAÇÃO SEM PERSISTÊNCIA':'SQL Server'})`));
+ let shuttingDown=false;
+ const shutdown=async()=>{if(shuttingDown)return;shuttingDown=true;const deadline=setTimeout(()=>process.exit(1),15000);httpServer.close();try{await whatsappService.close();await sql.close();clearTimeout(deadline);process.exit(0);}catch{console.error('Não foi possível encerrar o navegador da sessão.');clearTimeout(deadline);process.exit(1);}};
+ process.once('SIGINT',shutdown);process.once('SIGTERM',shutdown);
 }
 if(require.main===module)start().catch(async e=>{console.error(e.message);try{await sql.close()}catch{}process.exitCode=1});
 module.exports=app;

@@ -52,9 +52,9 @@ test('Download de anexo não pode recuperar mensagem de outra conversa',async()=
 test('Recupera integração após falha de inicialização sem abrir segunda sessão; antigas e novas ficam acessíveis',async()=>{
   const models=[{id:{_serialized:id},formattedTitle:'Contato antigo',t:1,msgs:{getModelsArray:()=>[{body:'Mensagem antiga',t:1}]}}];
   const context=vm.createContext({window:{require:name=>name==='WAWebSocketModel'?{Socket:{state:'CONNECTED'}}:{Chat:{getModelsArray:()=>models}}}});
-  const client=new EventEmitter();let factories=0,destroys=0;
+  const client=new EventEmitter();let factories=0,destroys=0,alive=true;
   client.pupPage={isClosed:()=>false,evaluate:async fn=>JSON.parse(JSON.stringify(vm.runInContext('('+fn.toString()+')()',context)??null))};
-  client.pupBrowser={isConnected:()=>true};client.initialize=async()=>{throw Error('startup hook failed after login')};client.destroy=async()=>{destroys++};client.logout=async()=>{};
+  client.pupBrowser={isConnected:()=>alive};client.initialize=async()=>{throw Error('startup hook failed after login')};client.destroy=async()=>{destroys++;alive=false};client.logout=async()=>{};
   client.getChats=async()=>{throw Error('must use isolated reader')};client.sendMessage=async()=>({id:{_serialized:'sent'}});
   const service=createWhatsAppService({clientFactory:()=>{factories++;return client}});
   await service.connect();await new Promise(setImmediate);assert.equal(service.status().status,'syncing');assert.equal(service.status().canConnect,false);

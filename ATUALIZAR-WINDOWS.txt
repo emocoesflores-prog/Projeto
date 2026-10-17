@@ -86,3 +86,11 @@ VISUAL WHATSAPP WEB
 A área de atendimento agora usa tema escuro, lista lateral, histórico e caixa de resposta fixa na tela. A conexão fica em um painel recolhível, e as informações/Florzinha abrem no botão de informações do cabeçalho.
 Emojis: botão de rosto ao lado do texto. Anexos: botão +. Microfone: grave, pare, ouça e depois envie. O microfone pede permissão do navegador; localhost e HTTPS são compatíveis. A lupa busca nas mensagens carregadas; Responder cria uma resposta citada de texto. Não há chamadas de voz/vídeo nem catálogo de GIFs integrado.
 Desconectar agora fica desabilitado sem sessão ativa. Preserve seu .env, pasta .wwebjs_auth e arquivo .whatsapp-desk.json; não é necessário parear de novo só para atualizar o visual.
+
+CORREÇÃO DE ENCERRAMENTO E TEMAS DO ATENDIMENTO
+
+Se o terminal mostrou EBUSY e voltou ao prompt, o servidor encerrou: por isso aparece Failed to fetch no painel. Antes de iniciar a versão atualizada, feche apenas a janela de WhatsApp que o sistema abriu. Se um Chrome invisível da execução antiga continuar bloqueando os arquivos, reinicie o Windows. Preserve .env, .wwebjs_auth e .whatsapp-desk.json; não apague a sessão como primeiro passo.
+
+A versão atualizada fecha o navegador antes de limpar a sessão e repete a limpeza de arquivos bloqueados na próxima conexão. O encerramento tem limite de espera e informa quando não foi possível fechar o navegador. Parar o servidor com Ctrl+C fecha o navegador sem solicitar logout.
+
+No topo do Atendimento, use Tema claro / Tema escuro. A escolha fica salva neste navegador e afeta somente a área de atendimento.

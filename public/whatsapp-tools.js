@@ -17,6 +17,12 @@ window.WhatsAppTools=(()=>{
  }
  return {
   init(config){options=config;
+  const themeButton=el('wa-theme');
+  const applyTheme=light=>{document.body.classList.toggle('wa-light',light);themeButton.textContent=light?'Tema escuro':'Tema claro';themeButton.setAttribute('aria-pressed',String(light));};
+  let savedTheme;try{savedTheme=localStorage.getItem('wa-theme');}catch{}
+  applyTheme(savedTheme==='light');
+  themeButton.onclick=()=>{const light=!document.body.classList.contains('wa-light');applyTheme(light);try{localStorage.setItem('wa-theme',light?'light':'dark');}catch{}};
+
    icon('wa-record',['M9 5a3 3 0 0 1 6 0v7a3 3 0 0 1-6 0V5Z','M6 10v2a6 6 0 0 0 12 0v-2M12 18v4M9 22h6']);
    icon('wa-attach',['M12 5v14M5 12h14']);icon('wa-submit',['M22 2 9 15M22 2l-7 20-6-7-7-6 20-7Z']);
    icon('wa-emoji',['M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z','M8 9h.01M16 9h.01M8 14c2 3 6 3 8 0']);

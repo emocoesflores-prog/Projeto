@@ -1,9 +1,11 @@
 const path = require('node:path');
-function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeoutMs = 90000, dataPath = path.join(__dirname, '.wwebjs_auth') } = {}) {
-  let client, starting, startupTimer, generation = 0, probing = null;
+function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeoutMs = 90000, shutdownTimeoutMs = 5000, dataPath = path.join(__dirname, '.wwebjs_auth') } = {}) {
+  let client, starting, startupTimer, generation = 0, probing = null, stopping = null;
+  const bounded = task => { let timer; return Promise.race([Promise.resolve().then(task),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('WA_CLOSE_TIMEOUT')),shutdownTimeoutMs);})]).finally(()=>clearTimeout(timer)); };
   let state = { status: 'disconnected', qr: null, error: null };
   const failureMessage = error => {
     const message = String(error?.message || error || '');
+    if (error?.code==='WA_SESSION_LOCKED' || /EBUSY|EPERM|resource busy|locked/i.test(message)) return 'O Chrome ainda mantém a sessão bloqueada. Feche apenas a janela do WhatsApp aberta pelo sistema, aguarde o encerramento e tente novamente.';
     if (/auth timeout|ready timeout/i.test(message)) return 'O WhatsApp abriu, mas não concluiu a autenticação. Ative WHATSAPP_SHOW_BROWSER=true no .env para verificar a janela do navegador.';
     if (/could not find chrome|executable.*doesn.t exist|browser was not found/i.test(message)) return 'Chrome não encontrado. No terminal do projeto, execute: npx puppeteer browsers install chrome';
     if (/user data directory.*in use|browser is already running|SingletonLock/i.test(message)) return 'A sessão está em uso por outro navegador. Encerre a outra instância deste sistema e tente novamente.';
@@ -11,9 +13,10 @@ function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeout
     return 'Não foi possível iniciar o WhatsApp. Confira o Chrome instalado e se outra instância está usando a sessão.';
   };
   const browserAlive = () => !!(client?.pupBrowser?.isConnected?.() || (client?.pupPage && !client.pupPage.isClosed?.()));
-  const canConnect = () => !starting && !browserAlive() && !['starting','qr','authenticated','syncing','ready'].includes(state.status);
-  const canDisconnect = () => !!client && state.status !== 'disconnected' && (browserAlive() || !['error'].includes(state.status));
+  const canConnect = () => !stopping && !starting && !browserAlive() && !['starting','qr','authenticated','syncing','ready'].includes(state.status);
+  const canDisconnect = () => !stopping && !!client && state.status !== 'disconnected' && (browserAlive() || !['error'].includes(state.status));
   async function refreshStatus() {
+    if (stopping) return { ...state, canConnect:false, canDisconnect:false };
     if (client?.pupPage?.isClosed?.() && state.status !== 'disconnected') { ++generation; starting = null; clearTimeout(startupTimer); state = { status:'disconnected', qr:null, error:'A conexão do WhatsApp foi encerrada.' }; }
     if (!client?.pupPage || state.status === 'disconnected') return { ...state, canConnect: canConnect(), canDisconnect: canDisconnect() };
     if (probing) { await probing; return { ...state, canConnect: canConnect(), canDisconnect: canDisconnect() }; }
@@ -52,7 +55,7 @@ function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeout
     status: () => ({ ...state, canConnect: canConnect(), canDisconnect: canDisconnect() }),
     refreshStatus,
     async connect() {
-      if (starting || !canConnect()) return;
+      if (stopping || starting || !canConnect()) return;
       clearTimeout(startupTimer);
       const current = ++generation;
       state = { status: 'starting', qr: null, error: null };
@@ -70,8 +73,9 @@ function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeout
         };
         if (clientFactory) client = clientFactory(options);
         else {
-          const { Client, LocalAuth } = require('whatsapp-web.js');
-          client = new Client({ ...options, authStrategy: new LocalAuth({ dataPath }) });
+          const { Client } = require('whatsapp-web.js');
+          const { SafeLocalAuth } = require('./whatsapp-local-auth');
+          client = new Client({ ...options, authStrategy: new SafeLocalAuth({ dataPath, onWarning:code=>console.error('WhatsApp: '+code) }) });
         }
         const armTimeout = () => {
         clearTimeout(startupTimer);
@@ -106,15 +110,32 @@ function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeout
         state = { status: 'error', qr: null, error: failureMessage(error) };
       }
     },
+    async close() {
+      clearTimeout(startupTimer);++generation;starting=null;
+      const old=client;client=null;state={status:'disconnected',qr:null,error:null};
+      if(old)await bounded(()=>old.destroy());
+    },
     async disconnect() {
-      if (!canDisconnect()) return;
-      clearTimeout(startupTimer);
-      ++generation;
-      starting = null;
-      const old = client;
-      client = null;
-      state = { status: 'disconnected', qr: null, error: null };
-      if (old) { try { await old.logout(); } finally { await old.destroy(); } }
+      if(stopping)return stopping;
+      if(!canDisconnect())return;
+      clearTimeout(startupTimer);const previous=state.status;++generation;starting=null;
+      const old=client;
+      state={status:'disconnecting',qr:null,error:'Encerrando a sessão do WhatsApp…'};
+      stopping=(async()=>{
+        let logoutFailed=false;
+        try{if(['ready','authenticated','syncing'].includes(previous))await bounded(()=>old.logout());}catch{logoutFailed=true;}
+        let closed=true;
+        try{await bounded(()=>old.destroy());}catch{closed=false;}
+        if(!closed||old.pupBrowser?.isConnected?.()){
+          state={status:'error',qr:null,error:'O navegador da sessão ainda não encerrou. Feche a janela aberta pelo sistema antes de reconectar.'};
+          throw Object.assign(new Error(state.error),{status:503,publicError:true});
+        }
+        client=null;
+        let cleaned=true;
+        try{if(old.authStrategy?.cleanup)cleaned=await old.authStrategy.cleanup();}catch{cleaned=false;}
+        state={status:'disconnected',qr:null,error:!cleaned?'Sessão encerrada. O Windows ainda está liberando arquivos; a limpeza será repetida antes da próxima conexão.':logoutFailed?'Conexão local encerrada. Confira em Aparelhos conectados no celular se o vínculo foi removido.':null};
+      })().finally(()=>{stopping=null;});
+      return stopping;
     },
     async chats() {
       const current = requireReady();
