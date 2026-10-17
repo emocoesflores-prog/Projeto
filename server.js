@@ -23,7 +23,7 @@ let pool,demoSettings={...defaults};
 const store=createOrderStore({demo,getPool:()=>pool,getTenant:tenantId,multi});
 const customers=createCustomerStore({demo,getPool:()=>pool,getTenant:tenantId,multi});
 async function readSettings(){
- if(multi){const tenant=await platformStore.tenant(tenantId());if(!tenant?.active)throw new OrderError('Loja indisponível.',404);return {deliveryFee:tenant.profile.deliveryFee??defaults.deliveryFee,pickupAddress:tenant.profile.pickupAddress||'',assistantName:tenant.profile.assistantName||(tenant.id===DEFAULT_TENANT?'Florzinha':'Assistente'),deliveryCities:require('./tenant-context').policy(tenant).deliveryCities,name:tenant.name,slug:tenant.slug,city:tenant.profile.city||'',state:tenant.profile.state||'',phone:tenant.profile.phone||''};}
+ if(multi){const tenant=await platformStore.tenant(tenantId());if(!tenant?.active)throw new OrderError('Loja indisponível.',404);return {orderingBlocked:require('./finance').access(tenant).blocked&&require('./finance').access(tenant).blockSite,deliveryFee:tenant.profile.deliveryFee??defaults.deliveryFee,deliveryRates:tenant.profile.deliveryRates||[],pickupAddress:tenant.profile.pickupAddress||'',assistantName:tenant.profile.assistantName||(tenant.id===DEFAULT_TENANT?'Florzinha':'Assistente'),deliveryCities:require('./tenant-context').policy(tenant).deliveryCities,name:tenant.name,slug:tenant.slug,city:tenant.profile.city||'',state:tenant.profile.state||'',phone:tenant.profile.phone||''};}
  if(demo)return {...demoSettings};
  const result=await pool.request().query('SELECT deliveryFee FROM dbo.StoreSettings WHERE id=1');
  if(!result.recordset.length)throw new Error('Configuração da loja ausente');
@@ -41,6 +41,7 @@ app.get('/api/store-settings',async(req,res,next)=>{try{res.set('Cache-Control',
 async function readCatalog(){if(!multi)return catalog;const tenant=await platformStore.tenant(tenantId());return tenant?.profile.catalog||catalog;}
 app.get('/api/products',async(req,res,next)=>{try{res.json(await readCatalog())}catch(e){next(e)}});
 async function createOrder(body,source){
+ if(source==='site'&&multi){const tenant=await platformStore.tenant(tenantId()),financial=require('./finance').access(tenant);if(financial.blocked&&financial.blockSite)throw new OrderError('Esta floricultura está temporariamente indisponível para novos pedidos.',403);}
  const catalog=await readCatalog();
  if(!body||typeof body!=='object'||Array.isArray(body))throw new OrderError('Informe os dados do pedido.',400);
  if(source==='site'&&(body.fulfillment==='store'||body.scheduleMode==='now'))throw new OrderError('A loja online aceita apenas entrega ou retirada agendada.',400);
@@ -58,7 +59,7 @@ async function createOrder(body,source){
    if(!savedAddress)throw new OrderError('Este endereço não pertence ao cliente selecionado.',404);
    if(body.deliveryAddressVersion!==savedAddress.version)throw new OrderError('O endereço mudou. Reabra a entrega e selecione a versão atual.',409);
    candidate.recipient=savedAddress.recipient;candidate.recipientPhone=savedAddress.recipientPhone;
-   candidate.address=formatAddress(savedAddress);candidate.city=savedAddress.city;
+   candidate.address=formatAddress(savedAddress);candidate.city=savedAddress.city;candidate.neighborhood=savedAddress.neighborhood;
   }
  }
 
@@ -68,7 +69,8 @@ async function createOrder(body,source){
  if(source==='manual'&&body.scheduleMode==='scheduled'&&!data.timeSlot)throw new OrderError('Escolha o dia e a faixa de horário do agendamento.',400);
  if(data.timeSlot&&orderOptions.expired(data.date,data.timeSlot))throw new OrderError('Esta faixa de horário já terminou. Escolha outro agendamento.',400);
  const settings=await readSettings();
- const shippingFee=data.fulfillment==='delivery'?settings.deliveryFee:0;
+ const quote=require('./public/delivery-rates').quote(settings,data.city,data.neighborhood);if(data.fulfillment==='delivery'&&quote.fee===null)throw new OrderError(quote.error,400);
+ const shippingFee=data.fulfillment==='delivery'?quote.fee:0;
  let amount;try{amount=total(data.items,catalog,data.fulfillment,shippingFee)}catch{throw new OrderError('Produto indisponível.',400)}
  const now=new Date().toISOString();
  const items=data.items.map(item=>{const p=catalog.find(p=>p.id===item.id);return {...item,name:p.name,unitPrice:p.price}});
@@ -85,6 +87,13 @@ app.use('/api/admin',(req,res,next)=>{
 const whatsappService = require('./whatsapp-service').createWhatsAppService();
 const legacyWhatsAppRouter=require('./whatsapp-routes')(whatsappService);
 app.use('/api/admin/whatsapp',async(req,res,next)=>{try{const router=multi?(await tenantResources.get(req.account.user.tenantId)).router:legacyWhatsAppRouter;router(req,res,next);}catch(e){next(e)}});
+app.get('/api/admin/delivery-settings',async(req,res,next)=>{try{res.json(await readSettings())}catch(e){next(e)}});
+app.put('/api/admin/delivery-settings',async(req,res,next)=>{try{
+ if(!multi)throw new OrderError('Ative o modo de plataforma para configurar entregas por cidade e bairro.',400);
+ const parsed=require('./delivery-settings').deliverySettingsSchema.safeParse(req.body);if(!parsed.success)throw new OrderError(parsed.error.issues[0]?.message||'Confira as taxas de entrega.',400);
+ const profile={...parsed.data,deliveryCities:[...new Set(parsed.data.deliveryRates.map(r=>r.city))],deliveryFee:0};
+ await platformStore.saveTenant(tenantId(),{profile});res.json(await readSettings());
+}catch(e){next(e)}});
 app.get('/api/admin/assistant-settings',async(req,res,next)=>{try{const settings=await readSettings();res.json({assistantName:settings.assistantName||'Florzinha'})}catch(e){next(e)}});
 app.put('/api/admin/assistant-settings',async(req,res,next)=>{try{if(!multi)throw new OrderError('Ative o modo de plataforma para personalizar a assistente.',400);const data=z.object({assistantName:z.string().trim().min(2).max(60)}).strict().safeParse(req.body);if(!data.success)throw new OrderError('Informe um nome com 2 a 60 caracteres.',400);await platformStore.saveTenant(tenantId(),{profile:data.data});res.json(data.data);}catch(e){next(e)}});
 app.get('/api/admin/cep/:cep',async(req,res,next)=>{try{res.json(await lookupCep(req.params.cep))}catch(error){next(error)}});

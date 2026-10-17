@@ -8,5 +8,5 @@ const DEFAULT_TENANT='00000000-0000-4000-8000-000000000001';
 const tenantId=()=>context.getStore()?.tenantId||DEFAULT_TENANT;
 const originalCities=['Mauá','Santo André','Ribeirão Pires'];
 const policy=tenant=>({tenantId:tenant.id,multi:true,deliveryCities:tenant.profile.deliveryCities||(tenant.id===DEFAULT_TENANT?originalCities:[tenant.profile.city].filter(Boolean))});
-const serves=city=>(context.getStore()?.deliveryCities||originalCities).includes(city);
+const serves=city=>(context.getStore()?.deliveryCities||originalCities).some(value=>require('./public/delivery-rates').normalize(value)===require('./public/delivery-rates').normalize(city));
 module.exports={context,DEFAULT_TENANT,PLATFORM_TENANT,PLATFORM_NAME,PLATFORM_LOGIN,PLATFORM_PHONE,tenantId,policy,serves};

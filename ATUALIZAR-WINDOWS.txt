@@ -1,3 +1,20 @@
+VERSÃO 2.1 — CADASTRO INOVA, ENTREGAS E FINANCEIRO
+Se já utiliza a plataforma 2.0, não execute outra migração SQL para esta atualização.
+Pare o servidor com Ctrl+C, atualize os arquivos do projeto preservando .env, .tenants,
+.wwebjs_auth e .whatsapp-desk.json. Execute npm ci e npm start. No navegador, Ctrl+F5.
+Na Inova, Editar permite criar/alterar o responsável e usuário. Senha em branco mantém
+uma senha já cadastrada; no primeiro acesso da loja, informe uma senha com 12 caracteres.
+A mudança de credenciais encerra sessões anteriores somente daquela loja.
+O cadastro da Inova tem CEP automático e máscaras de CPF/CNPJ e telefone.
+Taxas, cidades/bairros atendidos e retirada são configurados no painel de cada loja:
+Entregas > Taxa de Entrega / Retirada na loja. A configuração anterior continua válida
+até salvar as novas taxas. Nenhum pedido antigo é recalculado.
+Na Inova, Financeiro registra cobranças, vencimentos e pagamentos conferidos manualmente.
+Escolha por floricultura o bloqueio por inadimplência: somente painel, somente o site,
+ou ambos. A dívida vence ao final do dia de Brasília; o bloqueio começa
+no dia seguinte. Quite todas as cobranças vencidas para liberar a área escolhida.
+Suspensões manuais continuam valendo. Não há integração bancária nesta versão.
+
 ATUALIZAÇÃO DE ACESSOS — PÁGINAS SEPARADAS
 Gestão Inova: /inova.html
 Painel Floricultura Emoções Flores: /painel/emocoes-flores
