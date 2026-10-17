@@ -3,7 +3,7 @@ const WhatsAppDesk = (() => {
   const el=id=>document.getElementById(id);
   const node=(tag,text)=>{const n=document.createElement(tag);n.textContent=text;return n;};
   async function request(path,options={}) {
-    const r=await fetch('/api/admin/whatsapp'+path,{...options,headers:{...auth(),'Content-Type':'application/json'},cache:'no-store'});
+    const r=await fetch('/api/admin/whatsapp'+path,{...options,headers:{...auth(),'Content-Type':'application/json'},cache:'no-store',signal:AbortSignal.timeout(15000)});
     const data=await r.json();if(!r.ok)throw Error(data.error||'Falha na conexão.');return data;
   }
   function enabled(value){ready=value;el('wa-body').disabled=!value||!selected;el('wa-submit').disabled=!value||!selected||sending;}
@@ -27,11 +27,11 @@ const WhatsAppDesk = (() => {
   }
   return {
     init(options){auth=options.auth;
-      for(const action of ['connect','disconnect'])el('wa-'+action).onclick=async()=>{if(action==='disconnect'&&!confirm('Desconectar este aparelho do WhatsApp?'))return;const b=el('wa-'+action);b.disabled=true;try{await request('/'+action,{method:'POST',body:'{}'});clearTimeout(timer);await poll();}catch(e){el('wa-status').textContent=e.message;}finally{b.disabled=false;}};
+      for(const action of ['connect','disconnect'])el('wa-'+action).onclick=async()=>{if(action==='disconnect'&&!confirm('Desconectar este aparelho do WhatsApp?'))return;const b=el('wa-'+action);b.disabled=true;el('wa-status').textContent=action==='connect'?'Iniciando WhatsApp… Aguarde o QR Code nesta tela.':'Desconectando…';try{await request('/'+action,{method:'POST',body:'{}'});clearTimeout(timer);await poll();}catch(e){el('wa-status').textContent=e.name==='TimeoutError'?'O servidor demorou para responder. Verifique o terminal onde executou npm start.':e.message;}finally{b.disabled=false;}};
       el('wa-refresh').onclick=async()=>{try{await chats();await messages();}catch(e){el('wa-status').textContent=e.message;}};
       el('wa-send').onsubmit=async event=>{event.preventDefault();if(!selected||!ready||sending)return;const version=epoch;const id=selected.id,body=el('wa-body').value;sending=true;el('wa-submit').disabled=true;el('wa-result').textContent='Enviando…';try{await request('/chats/'+encodeURIComponent(id)+'/messages',{method:'POST',body:JSON.stringify({body})});if(version===epoch&&selected?.id===id){el('wa-body').value='';el('wa-result').textContent='Mensagem enviada ao WhatsApp.';await messages();}}catch(e){if(version===epoch)el('wa-result').textContent=e.message+' Confira a conversa no celular antes de reenviar.';}finally{sending=false;enabled(ready);}};
     },
-    setVisible(value){if(visible===value)return;visible=value;++epoch;clearTimeout(timer);if(value)poll();},
+    setVisible(value){if(visible===value)return;visible=value;++epoch;clearTimeout(timer);if(value){el('wa-status').textContent='Consultando conexão…';poll();}},
     logout(){visible=false;++epoch;clearTimeout(timer);selected=null;enabled(false);el('wa-qr').hidden=true;el('wa-qr').removeAttribute('src');el('wa-chats').replaceChildren();el('wa-messages').replaceChildren();el('wa-body').value='';el('wa-result').textContent='';}
   };
 })();

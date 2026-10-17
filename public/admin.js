@@ -3,6 +3,7 @@ const titles={whatsapp:['Conversas que aproximam.','Atenda seus clientes pelo Wh
 let orders=[],products=[],selectedOrder=null,connected=false;
 function element(tag,text,className){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e}
 function auth(){return {Authorization:`Bearer ${$('#token').value}`}}
+WhatsAppDesk.init({auth});
 function showView(view){if(!titles[view])return;WhatsAppDesk.setVisible(view==='whatsapp'&&connected);if(view==='customers'&&connected)CustomerDirectory.load();document.body.classList.toggle('orders-mode',view==='orders');document.body.classList.toggle('customers-mode',view==='customers');for(const section of document.querySelectorAll('.view'))section.hidden=section.id!==`view-${view}`;for(const button of document.querySelectorAll('.sidebar [data-view]')){button.classList.toggle('selected',button.dataset.view===view);button.setAttribute('aria-current',button.dataset.view===view?'page':'false')}const [title,subtitle,crumb]=titles[view];$('#page-title').textContent=title;$('#page-subtitle').textContent=subtitle;$('#breadcrumb').textContent=crumb}
 for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>showView(b.dataset.view);
 function table(container,headers,rows){const target=$(container);target.replaceChildren();if(!rows.length){target.append(element('div','Nenhum registro por aqui ainda. As novas solicitações aparecerão nesta tela.','empty-state'));return}const t=element('table'),head=element('thead'),tr=element('tr');for(const title of headers){const th=element('th',title);th.scope='col';tr.append(th)}head.append(tr);t.append(head);const body=element('tbody');for(const row of rows){const tr=element('tr');for(const value of row){const td=element('td');td.append(value instanceof Node?value:document.createTextNode(String(value)));tr.append(td)}body.append(tr)}t.append(body);target.append(t)}
@@ -23,5 +24,3 @@ $('#export').onclick=()=>{function cell(v){let text=String(v??'');if(/^[=+\-@\t\
 
 CustomerDirectory.init({auth});
 OrderDesk.init({getOrders:()=>orders,getProducts:()=>products,auth,onUpdate:order=>{const i=orders.findIndex(o=>o.id===order.id);if(i<0)orders.unshift(order);else orders[i]=order;render()},onConflict:load});
-
-WhatsAppDesk.init({auth});

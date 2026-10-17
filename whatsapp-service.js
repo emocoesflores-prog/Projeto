@@ -1,7 +1,14 @@
 const path = require('node:path');
-function createWhatsAppService({ clientFactory, qrEncoder, dataPath = path.join(__dirname, '.wwebjs_auth') } = {}) {
-  let client, starting, generation = 0;
+function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeoutMs = 90000, dataPath = path.join(__dirname, '.wwebjs_auth') } = {}) {
+  let client, starting, startupTimer, generation = 0;
   let state = { status: 'disconnected', qr: null, error: null };
+  const failureMessage = error => {
+    const message = String(error?.message || '');
+    if (/could not find chrome|executable.*doesn.t exist|browser was not found/i.test(message)) return 'Chrome não encontrado. No terminal do projeto, execute: npx puppeteer browsers install chrome';
+    if (/user data directory.*in use|browser is already running|SingletonLock/i.test(message)) return 'A sessão está em uso por outro navegador. Encerre a outra instância deste sistema e tente novamente.';
+    if (/ERR_|navigation.*timeout|net::/i.test(message)) return 'Não foi possível acessar o WhatsApp Web. Confira a conexão de internet e o firewall deste computador.';
+    return 'Não foi possível iniciar o WhatsApp. Confira o Chrome instalado e se outra instância está usando a sessão.';
+  };
   const requireReady = () => {
     if (state.status !== 'ready' || !client) throw Object.assign(new Error('Conecte o WhatsApp antes de continuar.'), { status: 409 });
     return client;
@@ -10,6 +17,7 @@ function createWhatsAppService({ clientFactory, qrEncoder, dataPath = path.join(
     status: () => ({ ...state }),
     async connect() {
       if (starting || ['starting', 'ready', 'qr', 'authenticated'].includes(state.status)) return;
+      clearTimeout(startupTimer);
       const current = ++generation;
       state = { status: 'starting', qr: null, error: null };
       try {
@@ -22,26 +30,37 @@ function createWhatsAppService({ clientFactory, qrEncoder, dataPath = path.join(
             ...(process.env.WHATSAPP_BROWSER_PATH ? { executablePath: process.env.WHATSAPP_BROWSER_PATH } : {})
           } });
         }
+        startupTimer = setTimeout(() => {
+          if (generation !== current || state.status !== 'starting') return;
+          ++generation; starting = null;
+          state = { status: 'error', qr: null, error: 'O WhatsApp não respondeu em 90 segundos. Confira a internet, desconecte o aparelho neste painel e tente novamente.' };
+          Promise.resolve(client.destroy()).catch(() => {});
+        }, initializationTimeoutMs);
+        startupTimer.unref?.();
         client.on('qr', async qr => {
+          clearTimeout(startupTimer);
           try {
             const image = await (qrEncoder || require('qrcode').toDataURL)(qr);
             if (generation === current) state = { status: 'qr', qr: image, error: null };
           } catch { if (generation === current) state = { status: 'error', qr: null, error: 'Falha ao gerar QR Code.' }; }
         });
-        client.on('authenticated', () => { if (generation === current) state = { status: 'authenticated', qr: null, error: null }; });
-        client.on('ready', () => { if (generation === current) state = { status: 'ready', qr: null, error: null }; });
+        client.on('authenticated', () => { clearTimeout(startupTimer); if (generation === current) state = { status: 'authenticated', qr: null, error: null }; });
+        client.on('ready', () => { clearTimeout(startupTimer); if (generation === current) state = { status: 'ready', qr: null, error: null }; });
         for (const event of ['auth_failure', 'disconnected']) client.on(event, () => {
           if (generation === current) state = { status: 'disconnected', qr: null, error: 'Conexão encerrada. Conecte novamente.' };
         });
-        starting = Promise.resolve(client.initialize()).catch(() => {
-          if (generation === current) state = { status: 'error', qr: null, error: 'Não foi possível iniciar o WhatsApp. Verifique o navegador e o acesso à rede no servidor.' };
+        starting = Promise.resolve(client.initialize()).catch(error => {
+          clearTimeout(startupTimer);
+          if (generation === current) state = { status: 'error', qr: null, error: failureMessage(error) };
         }).finally(() => { if (generation === current) starting = null; });
-      } catch {
+      } catch(error) {
+        clearTimeout(startupTimer);
         starting = null;
-        state = { status: 'error', qr: null, error: 'Não foi possível iniciar o navegador do WhatsApp.' };
+        state = { status: 'error', qr: null, error: failureMessage(error) };
       }
     },
     async disconnect() {
+      clearTimeout(startupTimer);
       ++generation;
       starting = null;
       const old = client;
