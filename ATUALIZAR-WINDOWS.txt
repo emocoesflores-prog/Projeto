@@ -1,3 +1,10 @@
+VERSÃO 2.3.1 — PALETA AZUL E LETRAS MAIORES
+Azul, branco e cinza substituem a identidade verde nos painéis e no atendimento.
+Texto principal e campos em 16 px; botões e informações auxiliares também foram ampliados.
+O tema global claro/escuro continua salvo. Não há alteração de banco.
+Preserve o .env e as pastas de sessões, atualize os arquivos do projeto,
+execute npm ci e npm start, e pressione Ctrl+F5 no navegador.
+
 VERSÃO 2.3 — VISUAL UNIFICADO E TEMA GLOBAL
 O visual do atendimento agora é a referência das demais telas administrativas.
 O tema claro/escuro funciona nos painéis da loja e da Inova, no atendimento e no PDV.

@@ -80,3 +80,7 @@ A análise consulta até 5.000 pedidos do período, separadamente do limite de 2
 Os painéis da floricultura e da Inova usam o mesmo conjunto de cores, fontes, botões, ícones, campos, tabelas e janelas, inspirado no atendimento WhatsApp. O botão de tema fica no cabeçalho de todas as telas e também no atendimento e no PDV. A preferência vale para todas as telas administrativas, é salva neste navegador e sincronizada entre abas abertas na mesma origem. A preferência anterior de tema do atendimento é reaproveitada. Sem preferência salva, o painel inicia no tema escuro. O site público mantém sua apresentação própria.
 
 Na visão geral, ações rápidas abrem novo pedido, atendimento ou cadastro de cliente. Estados de foco, seleção e passagem do mouse seguem o mesmo padrão; as animações respeitam a opção de redução de movimento do dispositivo. Os layouts foram verificados nos dois temas, incluindo janelas e diferentes resoluções. Não há alteração de banco, credenciais ou regras de faturamento nesta atualização.
+
+## Paleta e leitura (2.3.1)
+
+A identidade administrativa usa azul, branco e cinza no tema claro, e azul com cinzas escuros no tema escuro. A escala de leitura usa corpo e campos de 16 px, botões de 15 px, dados densos de 14–15 px e informações auxiliares de 13–14 px. Menus expandidos usam 16 px. Cores de alerta e cancelamento continuam distintas. A preferência global de tema é preservada. Não há alteração no banco.

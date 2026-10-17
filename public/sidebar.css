@@ -16,7 +16,7 @@
 .dashboard.sidebar-expanded .sidebar .brand i{display:inline!important}
 .dashboard.sidebar-expanded .sidebar .store-label,.dashboard.sidebar-expanded .sidebar .nav-label,.dashboard.sidebar-expanded .sidebar-bottom{display:block!important}
 .dashboard.sidebar-expanded .sidebar nav{display:block!important;overflow:visible;margin:12px 0!important}
-.dashboard.sidebar-expanded .sidebar nav button{width:100%!important;height:auto!important;display:flex!important;align-items:center;gap:10px;padding:12px!important;margin:5px 0!important;border-radius:8px;font-size:14px!important;text-align:left}
+.dashboard.sidebar-expanded .sidebar nav button{width:100%!important;height:auto!important;display:flex!important;align-items:center;gap:10px;padding:12px!important;margin:5px 0!important;border-radius:8px;font-size:16px!important;text-align:left}
 .dashboard.sidebar-expanded .sidebar nav button span{display:inline!important;white-space:normal}
 .dashboard.sidebar-expanded .sidebar .sidebar-bottom{margin-top:auto}
 .dashboard.whatsapp-mode #sidebar-toggle{color:var(--wa-text);border-color:var(--wa-line)}

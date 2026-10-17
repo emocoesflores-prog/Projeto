@@ -1,7 +1,7 @@
 /* Shared administrative design tokens. Storefront branding remains independent. */
-:root[data-admin-theme]{--ui-bg:#111918;--ui-panel:#1b2523;--ui-raised:#222e2a;--ui-input:#26332f;--ui-line:#35433d;--ui-text:#edf3ef;--ui-muted:#acbbb3;--ui-accent:#38d58e;--ui-accent-text:#062b1b;--ui-soft:#234435;--ui-hover:#2b3c33;--ui-warning:#f2cb77;--ui-warning-bg:#3d3420;--ui-danger:#ffaba8;--ui-danger-bg:#402b2b;--ui-info:#a6cbff;--ui-info-bg:#263649;--ui-shadow:0 8px 30px #00000019;--ui-radius:14px;color-scheme:dark}
-:root[data-admin-theme=light]{--ui-bg:#eef3f0;--ui-panel:#fff;--ui-raised:#f7faf8;--ui-input:#f2f6f3;--ui-line:#d1dfd6;--ui-text:#172d24;--ui-muted:#536b60;--ui-accent:#087e50;--ui-accent-text:#fff;--ui-soft:#e0f3e7;--ui-hover:#e8f2ec;--ui-warning:#735014;--ui-warning-bg:#fff3d6;--ui-danger:#9f302f;--ui-danger-bg:#fff0ee;--ui-info:#2a5c94;--ui-info-bg:#eaf3ff;--ui-shadow:0 8px 28px #17332608;color-scheme:light}
-:root[data-admin-theme] .dashboard{--green:var(--ui-accent);--ink:var(--ui-text);--muted:var(--ui-muted);--order-accent:var(--ui-accent);background:var(--ui-bg);color:var(--ui-text);font:14px/1.5 system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;accent-color:var(--ui-accent)}
+:root[data-admin-theme]{--ui-bg:#101722;--ui-panel:#192333;--ui-raised:#222f42;--ui-input:#253449;--ui-line:#3c4c62;--ui-text:#f1f5f9;--ui-muted:#bdc8d7;--ui-accent:#83b9ff;--ui-accent-text:#102b50;--ui-soft:#253e61;--ui-hover:#2b3d57;--ui-warning:#f2cb77;--ui-warning-bg:#3d3420;--ui-danger:#ffaba8;--ui-danger-bg:#402b2b;--ui-info:#b7d4ff;--ui-info-bg:#293c59;--ui-shadow:0 8px 30px #00000019;--ui-radius:14px;color-scheme:dark}
+:root[data-admin-theme=light]{--ui-bg:#f2f5f9;--ui-panel:#fff;--ui-raised:#f7f9fc;--ui-input:#f0f4f9;--ui-line:#ccd6e3;--ui-text:#182638;--ui-muted:#526277;--ui-accent:#185cc6;--ui-accent-text:#fff;--ui-soft:#e5eeff;--ui-hover:#eaf1fb;--ui-warning:#735014;--ui-warning-bg:#fff3d6;--ui-danger:#9f302f;--ui-danger-bg:#fff0ee;--ui-info:#2a5c94;--ui-info-bg:#eaf3ff;--ui-shadow:0 8px 28px #17335608;--ui-radius:14px;color-scheme:light}
+:root[data-admin-theme] .dashboard{--green:var(--ui-accent);--ink:var(--ui-text);--muted:var(--ui-muted);--order-accent:var(--ui-accent);background:var(--ui-bg);color:var(--ui-text);font:16px/1.6 system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;accent-color:var(--ui-accent)}
 :root[data-admin-theme] .dashboard.whatsapp-mode{--wa-bg:var(--ui-bg);--wa-panel:var(--ui-panel);--wa-input:var(--ui-input);--wa-line:var(--ui-line);--wa-text:var(--ui-text);--wa-muted:var(--ui-muted);--wa-accent:var(--ui-accent)}
 :root[data-admin-theme] .dashboard :where(h1,h2,h3,h4,.brand,.metric strong,.day-count,.inspector-empty h2,.customer-profile h3){font-family:inherit;font-weight:650;color:var(--ui-text);letter-spacing:-.025em}
 :root[data-admin-theme] .dashboard :where(h1){font-size:clamp(24px,2.3vw,34px);line-height:1.2}
@@ -69,7 +69,7 @@
 :root[data-admin-theme] .dashboard :where(.pdv-category.selected,.desk-tab.active){background:var(--ui-accent);color:var(--ui-accent-text)}
 :root[data-admin-theme] .dashboard :where(.desk-tab.active span){background:var(--ui-soft);color:var(--ui-text)}
 :root[data-admin-theme] .dashboard :where(dialog,.customer-editor,.delivery-dialog,.pdv){background:var(--ui-panel);color:var(--ui-text);border:1px solid var(--ui-line);border-radius:18px;box-shadow:0 24px 80px #0006}
-:root[data-admin-theme] .dashboard dialog::backdrop{background:#04130dc2;backdrop-filter:blur(5px)}
+:root[data-admin-theme] .dashboard dialog::backdrop{background:#040c1bc2;backdrop-filter:blur(5px)}
 :root[data-admin-theme] .dashboard dialog.pdv{border:0;border-radius:0;background:var(--ui-bg)}
 :root[data-admin-theme] .dashboard :where(.customer-modal-head,.pdv-client-picker,.customer-profile,.pdv-catalog-note){background:var(--ui-raised)}
 :root[data-admin-theme] .dashboard :where(.pdv-client-results,.locality-options,.locality-options button){background:var(--ui-panel);color:var(--ui-text);border-color:var(--ui-line)}
@@ -106,8 +106,8 @@
 :root[data-admin-theme] .dashboard :is(.panel,.metric,.day-card,.directory-customer,.performance-chart,.customer-profile){min-width:0}
 @media(max-width:760px){:root[data-admin-theme] .dashboard :is(.page-heading,.desk-toolbar){flex-wrap:wrap}:root[data-admin-theme] .dashboard .catalog-grid{grid-template-columns:1fr}:root[data-admin-theme] .dashboard .performance-heading>label{width:100%}:root[data-admin-theme] .dashboard .performance-heading select{width:100%}:root[data-admin-theme] .dashboard .panel-heading>div{max-width:100%}}
 :root[data-admin-theme] .dashboard .wa-bubble{background:var(--ui-raised);color:var(--ui-text)}
-:root[data-admin-theme] .dashboard .wa-bubble.mine{background:#07543d;color:#f0fff5}
-:root[data-admin-theme=light] .dashboard .wa-bubble.mine{background:#dcf8e5;color:var(--ui-text)}
+:root[data-admin-theme] .dashboard .wa-bubble.mine{background:#244d80;color:#f2f7ff}
+:root[data-admin-theme=light] .dashboard .wa-bubble.mine{background:#e1edff;color:var(--ui-text)}
 :root[data-admin-theme] .dashboard .wa-bubble p,:root[data-admin-theme] .dashboard .wa-bubble strong{color:inherit}
 :root[data-admin-theme] .dashboard .wa-bubble small{color:inherit;opacity:.75}
 :root[data-admin-theme] .dashboard :where(.wa-template,.wa-suggestion){background:var(--ui-raised);border-color:var(--ui-line)}
@@ -131,3 +131,68 @@
 :root[data-admin-theme] .dashboard .pdv-brand{min-width:0}
 :root[data-admin-theme] .dashboard .pdv-brand strong{overflow-wrap:anywhere}
 @media(max-width:760px){:root[data-admin-theme] .dashboard .pdv-topbar .theme-toggle{font-size:0;width:40px;min-width:40px;height:40px;padding:0}:root[data-admin-theme] .dashboard .pdv-topbar .theme-toggle:before{content:'☀';font-size:19px}:root[data-admin-theme=light] .dashboard .pdv-topbar .theme-toggle:before{content:'☾'}}
+
+/* Reading scale: 16px fields and body, 14–15px dense data, 13px supporting text. */
+:root[data-admin-theme] .dashboard :where(p,label,input,select,textarea){font-size:16px;line-height:1.6}
+:root[data-admin-theme] .dashboard :where(small,.small,.data-note,.feedback,.crumb,.store-label,.metric small,.performance-axis,.wa-preview){font-size:14px;line-height:1.55}
+:root[data-admin-theme] .dashboard :where(.button,.secondary,.text-button,.quiet,.theme-toggle,.quick-action strong){font-size:15px;line-height:1.4;min-height:44px}
+:root[data-admin-theme] .dashboard :where(.quick-action small,.metric-label,.eyebrow,.nav-label,.pill,.nav-badge){font-size:13px;line-height:1.5}
+:root[data-admin-theme] .dashboard .page-heading .eyebrow{font-size:13px;letter-spacing:.1em}
+:root[data-admin-theme] .dashboard .page-heading p:not(.eyebrow){font-size:16px}
+:root[data-admin-theme] .dashboard :where(h1){font-size:clamp(28px,2.5vw,36px)}
+:root[data-admin-theme] .dashboard :where(h2){font-size:24px}
+:root[data-admin-theme] .dashboard :where(h3){font-size:19px}
+:root[data-admin-theme] .dashboard :where(th,td,.performance-bar,.finance-charge p,.tenant-card p,.customer-profile p,.detail-row p,.inspector-field p){font-size:15px;line-height:1.6}
+:root[data-admin-theme] .dashboard :where(th){font-size:14px}
+:root[data-admin-theme] .dashboard :where(td strong,.directory-customer strong,.order-row-name strong,.order-card-top>strong){font-size:16px}
+:root[data-admin-theme] .dashboard :where(td small,.directory-customer small,.order-row-name small,.order-row-schedule,.order-row-side time,.list-caption){font-size:14px}
+:root[data-admin-theme] .dashboard .dashboard-topbar{font-size:14px}
+:root[data-admin-theme] .dashboard .order-row{height:auto;min-height:86px}
+:root[data-admin-theme] .dashboard .order-row-side .pill{font-size:13px;max-width:160px}
+:root[data-admin-theme] .dashboard .desk-tab{font-size:14px;padding:8px 10px;min-height:40px}
+:root[data-admin-theme] .dashboard :where(.inspector-section h3,.catalog-card p,.pdv-product p,.pdv-product small){font-size:15px}
+:root[data-admin-theme] .dashboard :where(.pdv-product h3){font-size:22px}
+:root[data-admin-theme] .dashboard #delivery-form :is(input,select,textarea,label){font-size:16px}
+:root[data-admin-theme] .dashboard :where(.customer-modal-content input,.customer-modal-content select,.customer-modal-content textarea,.customer-modal-content label){font-size:16px}
+:root[data-admin-theme] .dashboard .wa-messages{background-color:var(--ui-bg)}
+:root[data-admin-theme] .dashboard :where(.wa-bubble p,.wa-chat-line strong,.wa-chat-head strong,.wa-title){font-size:16px}
+:root[data-admin-theme] .dashboard :where(.wa-bubble small,.wa-day,.wa-chat-line time,.wa-metrics,.wa-channel,.wa-compose-hint){font-size:13px}
+:root[data-admin-theme] .dashboard .wa-top{height:auto;min-height:56px;padding:10px 16px;gap:12px}
+:root[data-admin-theme] .dashboard .wa-top>div{gap:10px;min-width:0}
+:root[data-admin-theme] .dashboard .wa-top .theme-toggle{font-size:14px;min-height:40px}
+:root[data-admin-theme] .dashboard :where(.wa-unread-badge,.wa-avatar){background:var(--ui-soft);color:var(--ui-accent)}
+:root[data-admin-theme] .dashboard .wa-chat-row.selected{background:var(--ui-soft)}
+:root[data-admin-theme] .dashboard .wa-chat-row:hover{background:var(--ui-hover)}
+:root[data-admin-theme] .dashboard .wa-compose-row .button{background:var(--ui-accent);color:var(--ui-accent-text)}
+:root[data-admin-theme] .dashboard :where(.wa-filter.active,.wa-filters button.active){background:var(--ui-soft);border-color:var(--ui-accent);color:var(--ui-accent)}
+@media(max-width:760px){:root[data-admin-theme] .dashboard .page-heading{gap:12px}:root[data-admin-theme] .dashboard .page-heading>div{min-width:0;max-width:100%}:root[data-admin-theme] .dashboard .metrics{grid-template-columns:1fr}:root[data-admin-theme] .dashboard .performance-cards{grid-template-columns:1fr}:root[data-admin-theme] .dashboard .wa-top{align-items:stretch;flex-direction:column;gap:7px;padding:8px 12px}:root[data-admin-theme] .dashboard .wa-top>div:last-child{display:flex;flex-wrap:wrap;gap:8px}:root[data-admin-theme] .dashboard #wa-status{font-size:12px;flex:1;min-width:45px}:root[data-admin-theme] .dashboard .wa-top :is(.secondary,.theme-toggle){font-size:13px;padding:8px;min-height:40px}:root[data-admin-theme] .dashboard .dashboard-topbar .theme-toggle{font-size:14px}:root[data-admin-theme] .dashboard .pdv-topbar .theme-toggle{font-size:0}:root[data-admin-theme] .dashboard .order-row-name strong{font-size:15px}:root[data-admin-theme] .dashboard .order-row-side .pill{font-size:12px}}
+:root[data-admin-theme] .dashboard .quick-action small{font-size:14px}
+:root[data-admin-theme] .dashboard :is(.wa-desk,.wa-queue,.wa-thread,.wa-context){background:var(--ui-bg);border-color:var(--ui-line)}
+:root[data-admin-theme] .dashboard :is(.wa-thread-head,.wa-composer,.wa-compose-row,.wa-context section,.wa-history-search,.wa-emoji-panel,.wa-attachment-menu,.wa-reply,.wa-recording,.wa-dialog){background:var(--ui-panel);color:var(--ui-text);border-color:var(--ui-line)}
+:root[data-admin-theme] .dashboard :is(.wa-avatar,.wa-chat-row:nth-child(3n) .wa-avatar,.wa-chat-row:nth-child(3n+2) .wa-avatar,.wa-day){background:var(--ui-soft);color:var(--ui-text)}
+:root[data-admin-theme] .dashboard :is(#wa-new,#wa-submit){background:var(--ui-accent);color:var(--ui-accent-text)}
+:root[data-admin-theme] .dashboard #view-whatsapp .button{background:var(--ui-accent);color:var(--ui-accent-text);font-size:15px}
+:root[data-admin-theme] .dashboard :is(.wa-dialog input,.wa-dialog textarea,.wa-dialog select){background:var(--ui-input)!important;color:var(--ui-text)!important;border-color:var(--ui-line)!important;font-size:16px}
+:root[data-admin-theme] .dashboard :is(.wa-emoji-panel input,.wa-history-search input,.wa-context input,.wa-context textarea,.wa-context select,.wa-search input){background:var(--ui-input);color:var(--ui-text);border-color:var(--ui-line);font-size:16px}
+:root[data-admin-theme] .dashboard :is(.wa-filters button,.wa-message-actions button,.wa-template strong,.wa-template span,.wa-media>button){font-size:14px}
+:root[data-admin-theme] .dashboard :is(.wa-filters button,.wa-message-actions button){min-height:34px}
+:root[data-admin-theme] .dashboard :is(.wa-media>button,.wa-emoji-categories button.active,.wa-attachment-menu button:hover){background:var(--ui-soft);color:var(--ui-accent);border-color:var(--ui-accent)}
+:root[data-admin-theme] .dashboard :is(.wa-bubble a,.wa-icon:hover){color:var(--ui-accent)}
+:root[data-admin-theme] .dashboard #wa-status{color:var(--ui-muted)}
+:root[data-admin-theme] .dashboard .wa-metrics{height:auto;min-height:36px;flex-wrap:wrap;padding:8px 12px;gap:12px}
+:root[data-admin-theme] .dashboard .wa-queue-note{font-size:13px;line-height:1.5;color:var(--ui-muted)}
+:root[data-admin-theme] .dashboard .online-dot{background:var(--ui-accent)}
+:root[data-admin-theme] .dashboard :is(.wa-bubble.search-hit,.wa-bubble.search-current){outline-color:var(--ui-accent)}
+:root[data-admin-theme] .dashboard .wa-bubble.search-current{background:var(--ui-soft)}
+:root[data-admin-theme] .dashboard .wa-reply{border-left-color:var(--ui-accent)}
+:root[data-admin-theme] .dashboard :where(.stage-scheduled,.stage-production,.stage-pickup,.stage-history,.stage-finished){--stage-bg:var(--ui-soft);--stage-ink:var(--ui-accent);--stage-border:var(--ui-line)}
+@media(max-width:1100px){:root[data-admin-theme] .dashboard.sidebar-expanded .order-rows.two-columns{grid-template-columns:1fr}:root[data-admin-theme] .dashboard.sidebar-expanded .desk-workspace{grid-template-columns:1fr}:root[data-admin-theme] .dashboard .desk-filters{flex-wrap:wrap}:root[data-admin-theme] .dashboard :is(.order-row-content,.order-row-name){min-width:0}}
+:root[data-admin-theme] .dashboard .orders-secondary-filters{flex-wrap:wrap}
+:root[data-admin-theme] .dashboard .dashboard-footer{font-size:14px}
+:root[data-admin-theme] .dashboard .dashboard-footer span{font-size:13px}
+:root[data-admin-theme] .dashboard .sidebar-bottom p{font-size:14px}
+:root[data-admin-theme] .dashboard .wa-ai-brand{font-size:13px}
+:root[data-admin-theme] .dashboard .wa-thread-head strong{font-size:16px}
+:root[data-admin-theme] .dashboard #view-whatsapp .secondary{background:var(--ui-raised);color:var(--ui-text);border-color:var(--ui-line);font-size:15px}
+@media(max-width:760px){:root[data-admin-theme] .dashboard #view-whatsapp .wa-top .secondary{font-size:13px}}
+:root[data-admin-theme] .dashboard .wa-top>div:last-child{flex-wrap:wrap}
