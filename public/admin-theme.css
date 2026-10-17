@@ -1,0 +1,133 @@
+/* Shared administrative design tokens. Storefront branding remains independent. */
+:root[data-admin-theme]{--ui-bg:#111918;--ui-panel:#1b2523;--ui-raised:#222e2a;--ui-input:#26332f;--ui-line:#35433d;--ui-text:#edf3ef;--ui-muted:#acbbb3;--ui-accent:#38d58e;--ui-accent-text:#062b1b;--ui-soft:#234435;--ui-hover:#2b3c33;--ui-warning:#f2cb77;--ui-warning-bg:#3d3420;--ui-danger:#ffaba8;--ui-danger-bg:#402b2b;--ui-info:#a6cbff;--ui-info-bg:#263649;--ui-shadow:0 8px 30px #00000019;--ui-radius:14px;color-scheme:dark}
+:root[data-admin-theme=light]{--ui-bg:#eef3f0;--ui-panel:#fff;--ui-raised:#f7faf8;--ui-input:#f2f6f3;--ui-line:#d1dfd6;--ui-text:#172d24;--ui-muted:#536b60;--ui-accent:#087e50;--ui-accent-text:#fff;--ui-soft:#e0f3e7;--ui-hover:#e8f2ec;--ui-warning:#735014;--ui-warning-bg:#fff3d6;--ui-danger:#9f302f;--ui-danger-bg:#fff0ee;--ui-info:#2a5c94;--ui-info-bg:#eaf3ff;--ui-shadow:0 8px 28px #17332608;color-scheme:light}
+:root[data-admin-theme] .dashboard{--green:var(--ui-accent);--ink:var(--ui-text);--muted:var(--ui-muted);--order-accent:var(--ui-accent);background:var(--ui-bg);color:var(--ui-text);font:14px/1.5 system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;accent-color:var(--ui-accent)}
+:root[data-admin-theme] .dashboard.whatsapp-mode{--wa-bg:var(--ui-bg);--wa-panel:var(--ui-panel);--wa-input:var(--ui-input);--wa-line:var(--ui-line);--wa-text:var(--ui-text);--wa-muted:var(--ui-muted);--wa-accent:var(--ui-accent)}
+:root[data-admin-theme] .dashboard :where(h1,h2,h3,h4,.brand,.metric strong,.day-count,.inspector-empty h2,.customer-profile h3){font-family:inherit;font-weight:650;color:var(--ui-text);letter-spacing:-.025em}
+:root[data-admin-theme] .dashboard :where(h1){font-size:clamp(24px,2.3vw,34px);line-height:1.2}
+:root[data-admin-theme] .dashboard :where(h2){line-height:1.3}
+:root[data-admin-theme] .dashboard :where(h3){line-height:1.4}
+:root[data-admin-theme] .dashboard :where(p,small,label,th,.eyebrow,.crumb,.metric-label,.list-caption,.store-label,.data-note,.feedback,.small,.nav-label,.pdv-top-note,.customer-required-note,.performance-axis){color:var(--ui-muted)}
+:root[data-admin-theme] .dashboard :where(strong,td,.detail-row p,.inspector-field p,.customer-profile p,.directory-customer strong,.pdv-product h3,.pdv-product strong,.catalog-card strong,.pdv-client-result strong,.pdv-brand strong){color:var(--ui-text)}
+:root[data-admin-theme] .dashboard :where(a,.text-button){color:var(--ui-accent)}
+:root[data-admin-theme] .dashboard :where(button,a,input,select,textarea){transition:background-color .16s,border-color .16s,color .16s,box-shadow .16s,transform .16s}
+:root[data-admin-theme] .dashboard :where(button:not(:disabled),a){-webkit-tap-highlight-color:transparent}
+:root[data-admin-theme] .dashboard :where(button):disabled{cursor:not-allowed;opacity:.48}
+:root[data-admin-theme] .dashboard :where(button,input,select,textarea,a):focus-visible{outline:3px solid var(--ui-accent);outline-offset:3px}
+:root[data-admin-theme] .dashboard :where(input,select,textarea){background:var(--ui-input);border:1px solid var(--ui-line);border-radius:10px;color:var(--ui-text);font:inherit;font-size:13px;padding:11px 13px;box-shadow:none;min-width:0}
+:root[data-admin-theme] .dashboard :where(input,select,textarea)::placeholder{color:var(--ui-muted);opacity:.8}
+:root[data-admin-theme] .dashboard :where(input,select,textarea):focus{border-color:var(--ui-accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--ui-accent) 14%,transparent)}
+:root[data-admin-theme] .dashboard :where(input[type=checkbox],input[type=radio]){accent-color:var(--ui-accent);box-shadow:none;padding:0}
+:root[data-admin-theme] .dashboard :where(.button,.pdv-category.selected,.pdv-add,.desk-tab.active,.delivery-tabs [aria-selected=true]){background:var(--ui-accent);color:var(--ui-accent-text);border-color:var(--ui-accent);border-radius:10px;font-weight:650}
+:root[data-admin-theme] .dashboard :where(.button,.secondary){padding:11px 16px;font-size:12px}
+:root[data-admin-theme] .dashboard :where(.button):hover:not(:disabled){filter:brightness(1.07);box-shadow:0 4px 14px color-mix(in srgb,var(--ui-accent) 18%,transparent)}
+:root[data-admin-theme] .dashboard :where(.secondary,.quiet,.icon-button,.pdv-category,.desk-tab,.customer-modal-head>button,.delivery-dialog button:not(.button),.pdv-brand>button){background:var(--ui-raised);border:1px solid var(--ui-line);color:var(--ui-text);border-radius:10px}
+:root[data-admin-theme] .dashboard :where(.secondary,.quiet,.icon-button,.desk-tab,.text-button):hover:not(:disabled){background:var(--ui-hover);border-color:var(--ui-accent);color:var(--ui-accent)}
+:root[data-admin-theme] .dashboard :where(.theme-toggle){white-space:nowrap;font-weight:600;font-size:12px;min-height:36px;padding:8px 12px;border:1px solid var(--ui-line);border-radius:20px;background:var(--ui-raised);color:var(--ui-text)}
+:root[data-admin-theme] .dashboard .dashboard-topbar{position:sticky;top:0;z-index:20;min-height:68px;height:auto;padding:16px 28px;background:var(--ui-panel);border-color:var(--ui-line);gap:12px}
+:root[data-admin-theme] .dashboard .dashboard-topbar>div{gap:12px;flex-wrap:wrap}
+:root[data-admin-theme] .dashboard .dashboard-main{padding:30px;max-width:1600px}
+:root[data-admin-theme] .dashboard .page-heading{margin-bottom:24px}
+:root[data-admin-theme] .dashboard .page-heading .eyebrow{font-size:10px;letter-spacing:.15em;color:var(--ui-accent)}
+:root[data-admin-theme] .dashboard .sidebar{background:var(--ui-panel);border-color:var(--ui-line)}
+:root[data-admin-theme] .dashboard .sidebar .brand{color:var(--ui-text);font-family:inherit;font-weight:700}
+:root[data-admin-theme] .dashboard .sidebar .brand i{font-style:normal;font-weight:700}
+:root[data-admin-theme] .dashboard .sidebar .brand:before{color:var(--ui-accent)}
+:root[data-admin-theme] .dashboard .sidebar nav button{color:var(--ui-muted);font-weight:500;transition:background-color .15s,color .15s}
+:root[data-admin-theme] .dashboard .sidebar nav button:hover{background:var(--ui-hover);color:var(--ui-text)}
+:root[data-admin-theme] .dashboard .sidebar nav button:is(.selected,.inova-nav,.performance-active){background:var(--ui-soft);color:var(--ui-accent);font-weight:650}
+:root[data-admin-theme] .dashboard :where(.sidebar-bottom,.dashboard-footer){border-color:var(--ui-line);color:var(--ui-muted)}
+:root[data-admin-theme] .dashboard :where(.nav-icon){width:20px;height:20px;flex-shrink:0}
+:root[data-admin-theme] .dashboard :where(.avatar,.client-avatar,.order-mode-icon,.order-row-avatar,.metric-icon,.pdv-brand-icon){background:var(--ui-soft);color:var(--ui-accent);border-radius:12px}
+:root[data-admin-theme] .dashboard :where(.nav-badge){background:var(--ui-input);color:var(--ui-text)}
+:root[data-admin-theme] .dashboard :where(.panel,.metric,.attention-card,.day-card,.catalog-card,.order-inspector,.orders-control-panel,.directory-customer,.customer-profile,.customer-directory-empty,.performance-chart,.performance-cards article,.tenant-card,.finance-charge,.pickup-point,.address-card,.address-history-entry,.pdv-product,.pdv-catalog-note,.pdv-client-picker){background:var(--ui-panel);border-color:var(--ui-line);border-radius:var(--ui-radius);box-shadow:var(--ui-shadow)}
+:root[data-admin-theme] .dashboard :where(.metric,.directory-customer,.catalog-card,.tenant-card,.pdv-product){transition:transform .16s,border-color .16s,box-shadow .16s}
+@media(hover:hover){:root[data-admin-theme] .dashboard :where(.metric,.catalog-card,.directory-customer,.tenant-card):hover{border-color:color-mix(in srgb,var(--ui-accent) 55%,var(--ui-line));transform:translateY(-2px)}}
+:root[data-admin-theme] .dashboard :where(.metric strong){font-size:34px;font-weight:650}
+:root[data-admin-theme] .dashboard :where(.metric-label){font-size:11px;letter-spacing:.03em;text-transform:none}
+:root[data-admin-theme] .dashboard :where(.metric small,.day-card p){font-size:12px}
+:root[data-admin-theme] .dashboard :where(.attention-card,.day-card,.performance-cards article,.finance-summary>div,.pdv-top-note,.customer-required-note){background:var(--ui-raised);border-color:var(--ui-line)}
+:root[data-admin-theme] .dashboard :where(.pill,.pill.pink,.wa-channel){background:var(--ui-soft);color:var(--ui-accent);border-color:var(--ui-line)}
+:root[data-admin-theme] .dashboard :where(.pill.amber,.notice,.order-ribbon.amber){background:var(--ui-warning-bg);color:var(--ui-warning)}
+:root[data-admin-theme] .dashboard :where(.pill.neutral){background:var(--ui-input);color:var(--ui-muted)}
+:root[data-admin-theme] .dashboard :where(table){font-size:12px}
+:root[data-admin-theme] .dashboard :where(th){background:var(--ui-raised);color:var(--ui-muted);font-size:10px;letter-spacing:.04em}
+:root[data-admin-theme] .dashboard :where(td,.detail-row,.inspector-field,.inspector-section,.timeline-entry,.rate-row,.pdv-cart-item,.day-card p,.customer-profile>div){border-color:var(--ui-line)}
+:root[data-admin-theme] .dashboard :where(tbody tr):hover{background:var(--ui-hover)}
+:root[data-admin-theme] .dashboard :where(.empty-state,.inspector-empty,.customer-directory-empty){color:var(--ui-muted);border-color:var(--ui-line);background:var(--ui-panel)}
+:root[data-admin-theme] .dashboard :where(.inspector-empty h2,.customer-directory-empty h3){color:var(--ui-text);font-size:22px}
+:root[data-admin-theme] .dashboard :where(.empty-state>span,.inspector-empty>span,.auth-icon){color:var(--ui-accent)}
+:root[data-admin-theme] .dashboard :where(.orders-control-panel,.desk-filters,.orders-secondary-filters,.order-cards,.order-list-column,.inspector-heading,.inspector-footer,.pdv-topbar,.pdv-sale,.pdv-catalog,.pdv-sale-footer,.pdv-cart-footer,.customer-modal-head,.customer-modal-content,.delivery-dialog-content,.delivery-save-footer,.delivery-toolbar){background:var(--ui-panel);border-color:var(--ui-line);color:var(--ui-text)}
+:root[data-admin-theme] .dashboard :where(.order-row,.order-card,.pdv-client-result,.customer-new-option,.delivery-address-option){background:var(--ui-panel);border-color:var(--ui-line);color:var(--ui-text)}
+:root[data-admin-theme] .dashboard :where(.order-row,.order-card,.pdv-client-result,.customer-new-option):hover{background:var(--ui-hover)}
+:root[data-admin-theme] .dashboard :where(.order-row.is-selected,.order-card.is-selected){background:var(--ui-soft);border-color:var(--ui-accent)}
+:root[data-admin-theme] .dashboard :where(.order-row-name,.order-card-top>strong,.order-row-meta,.order-row-date,.order-row-type,.order-row-time,.order-row-preview,.inspector-tools .icon-button){color:var(--ui-text)}
+:root[data-admin-theme] .dashboard :where(.order-row small,.order-card-meta>span,.order-card-bottom>span,.order-card-top>small,.order-card-tags,.inspector-heading small,.inspector-field small,.detail-row small){color:var(--ui-muted)}
+:root[data-admin-theme] .dashboard :where(.order-row-status){border:1px solid var(--ui-line);border-radius:6px}
+:root[data-admin-theme] .dashboard :where(.order-ribbon,.appointment,.inspector-card,.editor-section,.pdv-timing-panel,.pdv-delivery-card,.delivery-history-note,.delivery-form-heading,.customer-search-box){background:var(--ui-raised);border-color:var(--ui-line);color:var(--ui-text)}
+:root[data-admin-theme] .dashboard :where(.pdv-search input,.customer-search-box input){background:var(--ui-input);color:var(--ui-text);border-color:var(--ui-line)}
+:root[data-admin-theme] .dashboard :where(.pdv-category.selected,.desk-tab.active){background:var(--ui-accent);color:var(--ui-accent-text)}
+:root[data-admin-theme] .dashboard :where(.desk-tab.active span){background:var(--ui-soft);color:var(--ui-text)}
+:root[data-admin-theme] .dashboard :where(dialog,.customer-editor,.delivery-dialog,.pdv){background:var(--ui-panel);color:var(--ui-text);border:1px solid var(--ui-line);border-radius:18px;box-shadow:0 24px 80px #0006}
+:root[data-admin-theme] .dashboard dialog::backdrop{background:#04130dc2;backdrop-filter:blur(5px)}
+:root[data-admin-theme] .dashboard dialog.pdv{border:0;border-radius:0;background:var(--ui-bg)}
+:root[data-admin-theme] .dashboard :where(.customer-modal-head,.pdv-client-picker,.customer-profile,.pdv-catalog-note){background:var(--ui-raised)}
+:root[data-admin-theme] .dashboard :where(.pdv-client-results,.locality-options,.locality-options button){background:var(--ui-panel);color:var(--ui-text);border-color:var(--ui-line)}
+:root[data-admin-theme] .dashboard :where(.locality-options button):hover,:root[data-admin-theme] .dashboard :where(.locality-options button[aria-selected=true]){background:var(--ui-soft)}
+:root[data-admin-theme] .dashboard :where(.performance-track){background:var(--ui-input)}
+:root[data-admin-theme] .dashboard :where(.performance-track>div){background:var(--ui-accent)}
+:root[data-admin-theme] .dashboard :where(.finance-charge[data-status=overdue]){border-left-color:var(--ui-danger)}
+:root[data-admin-theme] .dashboard :where(.finance-charge[data-status=paid]){border-left-color:var(--ui-accent)}
+:root[data-admin-theme] .dashboard :where(#finance-policy){border-color:var(--ui-line);background:var(--ui-raised)}
+:root[data-admin-theme] .dashboard :where(.pickup-point:first-child legend:after){color:var(--ui-accent)}
+:root[data-admin-theme] .dashboard :where(.wa-top,.wa-metrics,.wa-connection,.wa-context-card,.wa-ai-card,.wa-popover,.wa-attachment-menu,.wa-emoji-picker){border-color:var(--ui-line)}
+:root[data-admin-theme] .dashboard :where(.wa-top,.wa-metrics,.wa-connection,.wa-chat-head,.wa-context-card,.wa-ai-card,.wa-compose,.wa-emoji-picker){background:var(--ui-panel);color:var(--ui-text)}
+:root[data-admin-theme] .dashboard .wa-top .theme-toggle{border-radius:20px}
+:root[data-admin-theme] .dashboard.orders-mode .dashboard-main{padding:0 24px 20px}
+:root[data-admin-theme] .dashboard.whatsapp-mode .dashboard-main{padding:0;max-width:none}
+:root[data-admin-theme] .dashboard :where(.view:not([hidden])){animation:panel-appear .16s ease-out}
+@keyframes panel-appear{from{opacity:.65;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:760px){:root[data-admin-theme] .dashboard .dashboard-main{padding:20px 14px}:root[data-admin-theme] .dashboard .dashboard-topbar{padding:12px 14px;gap:10px;position:relative}:root[data-admin-theme] .dashboard .dashboard-topbar>div{gap:8px}:root[data-admin-theme] .dashboard .dashboard-topbar .theme-toggle{padding:8px 10px;font-size:11px}:root[data-admin-theme] .dashboard :where(input,select,textarea){font-size:16px}:root[data-admin-theme] .dashboard :where(.button,.secondary){min-height:42px}:root[data-admin-theme] .dashboard.whatsapp-mode .dashboard-main{padding:0}:root[data-admin-theme] .dashboard.orders-mode .dashboard-main{padding:0 12px 16px}}
+@media(prefers-reduced-motion:reduce){:root[data-admin-theme] .dashboard *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+/* Nested forms and drawers use the same surfaces, including the checkout workspace. */
+:root[data-admin-theme] .dashboard :where(.pdv-sale-heading,.pdv-mode-field,.pdv-field,.pdv-field-content,.pdv-timing-options button,.pdv-pickup-note,.pdv-cart-empty,.pdv-payment-note,.customer-search-results,.customer-modal-footer,.whatsapp-input,.whatsapp-input>span,.delivery-saved-card,.delivery-history .dialog-head,.profile-deliveries>article,.pdv-schedule-footer){background:var(--ui-raised);border-color:var(--ui-line);color:var(--ui-text)}
+:root[data-admin-theme] .dashboard :where(summary,.pdv-field-content strong,.pdv-field-icon,.attention-icon,.pdv-chevron,.required-mark,.pdv-price-row,.pdv-grand-total,.pdv-cart-item-header,.pdv-delivery-summary,.delivery-saved-card-title){color:var(--ui-text)}
+:root[data-admin-theme] .dashboard :where(.pdv-grand-total strong){font-family:inherit;font-size:28px;font-weight:700}
+:root[data-admin-theme] .dashboard .page-heading p:not(.eyebrow),:root[data-admin-theme] .dashboard .directory-search input::placeholder{color:var(--ui-muted)}
+:root[data-admin-theme] .dashboard :where(.pdv-timing-options button.is-chosen,.pdv-timing-options button:hover,.customer-search-results .pdv-client-result:hover,.customer-search-results .pdv-client-result[aria-selected=true]){background:var(--ui-soft);border-color:var(--ui-accent);color:var(--ui-accent)}
+:root[data-admin-theme] .dashboard .pdv-sale-footer #pdv-submit{background:var(--ui-accent);color:var(--ui-accent-text);border-color:var(--ui-accent);box-shadow:none}
+:root[data-admin-theme] .dashboard #delivery-form :is(input,select,textarea){background:var(--ui-input);color:var(--ui-text);border-color:var(--ui-line)}
+:root[data-admin-theme] .dashboard #delivery-form label,:root[data-admin-theme] .dashboard :is(#pdv-result,#pdv-schedule-result,#customer-result,#delivery-load-status,#delivery-result,#settings-result){color:var(--ui-muted)}
+:root[data-admin-theme] .dashboard #pdv-delivery-summary>strong{color:var(--ui-text)}
+:root[data-admin-theme] .dashboard .panel-heading{flex-wrap:wrap}
+:root[data-admin-theme] .dashboard .panel-heading>*{min-width:0;max-width:100%}
+:root[data-admin-theme] .dashboard .panel-heading label{flex:0 1 auto}
+:root[data-admin-theme] .dashboard .panel-heading input{max-width:100%;width:100%}
+:root[data-admin-theme] .dashboard :is(.panel,.metric,.day-card,.directory-customer,.performance-chart,.customer-profile){min-width:0}
+@media(max-width:760px){:root[data-admin-theme] .dashboard :is(.page-heading,.desk-toolbar){flex-wrap:wrap}:root[data-admin-theme] .dashboard .catalog-grid{grid-template-columns:1fr}:root[data-admin-theme] .dashboard .performance-heading>label{width:100%}:root[data-admin-theme] .dashboard .performance-heading select{width:100%}:root[data-admin-theme] .dashboard .panel-heading>div{max-width:100%}}
+:root[data-admin-theme] .dashboard .wa-bubble{background:var(--ui-raised);color:var(--ui-text)}
+:root[data-admin-theme] .dashboard .wa-bubble.mine{background:#07543d;color:#f0fff5}
+:root[data-admin-theme=light] .dashboard .wa-bubble.mine{background:#dcf8e5;color:var(--ui-text)}
+:root[data-admin-theme] .dashboard .wa-bubble p,:root[data-admin-theme] .dashboard .wa-bubble strong{color:inherit}
+:root[data-admin-theme] .dashboard .wa-bubble small{color:inherit;opacity:.75}
+:root[data-admin-theme] .dashboard :where(.wa-template,.wa-suggestion){background:var(--ui-raised);border-color:var(--ui-line)}
+:root[data-admin-theme] .dashboard :where(.wa-template strong,.wa-suggestion strong){color:var(--ui-accent)}
+:root[data-admin-theme] .dashboard :where(.wa-suggestion p,.wa-template span,.pdv-mode-field>span){color:var(--ui-text)}
+:root[data-admin-theme] .dashboard .quick-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:0 0 22px}
+:root[data-admin-theme] .dashboard .quick-action{display:flex;align-items:center;gap:14px;text-align:left;border:1px solid var(--ui-line);border-radius:14px;background:var(--ui-panel);color:var(--ui-text);padding:17px 20px;box-shadow:var(--ui-shadow)}
+:root[data-admin-theme] .dashboard .quick-action>span:first-child{display:grid;place-items:center;width:40px;height:40px;background:var(--ui-soft);color:var(--ui-accent);border-radius:12px;font-size:22px;flex-shrink:0}
+:root[data-admin-theme] .dashboard .quick-action strong{font-size:14px;display:block}
+:root[data-admin-theme] .dashboard .quick-action small{display:block;margin-top:3px;font-size:11px;color:var(--ui-muted)}
+:root[data-admin-theme] .dashboard .quick-action:hover{background:var(--ui-hover);border-color:var(--ui-accent);transform:translateY(-2px)}
+@media(max-width:900px){:root[data-admin-theme] .dashboard .quick-actions{grid-template-columns:1fr}:root[data-admin-theme] .dashboard .quick-action{padding:14px}}
+/* Keep operational status colors meaningful in both palettes. */
+:root[data-admin-theme=dark] .dashboard :where(.stage-payment,.stage-ready,.stage-route){--stage-bg:var(--ui-warning-bg);--stage-ink:var(--ui-warning);--stage-border:#a18747}
+:root[data-admin-theme=dark] .dashboard :where(.stage-scheduled){--stage-bg:#352e47;--stage-ink:#d4c3fa;--stage-border:#8f77ba}
+:root[data-admin-theme=dark] .dashboard :where(.stage-production){--stage-bg:var(--ui-info-bg);--stage-ink:var(--ui-info);--stage-border:#6a92be}
+:root[data-admin-theme=dark] .dashboard :where(.stage-pickup,.stage-history,.stage-finished){--stage-bg:var(--ui-soft);--stage-ink:var(--ui-accent);--stage-border:var(--ui-accent)}
+:root[data-admin-theme=dark] .dashboard :where(.stage-cancelled){--stage-bg:var(--ui-danger-bg);--stage-ink:var(--ui-danger);--stage-border:#bc706d}
+:root[data-admin-theme] .dashboard .order-row-side .pill{background:var(--stage-bg,var(--ui-soft));color:var(--stage-ink,var(--ui-accent))}
+:root[data-admin-theme] .dashboard .desk-tab:not(.active){background:var(--stage-bg,var(--ui-raised));color:var(--stage-ink,var(--ui-text))}
+:root[data-admin-theme] .dashboard .pdv-brand{min-width:0}
+:root[data-admin-theme] .dashboard .pdv-brand strong{overflow-wrap:anywhere}
+@media(max-width:760px){:root[data-admin-theme] .dashboard .pdv-topbar .theme-toggle{font-size:0;width:40px;min-width:40px;height:40px;padding:0}:root[data-admin-theme] .dashboard .pdv-topbar .theme-toggle:before{content:'☀';font-size:19px}:root[data-admin-theme=light] .dashboard .pdv-topbar .theme-toggle:before{content:'☾'}}

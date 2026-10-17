@@ -1,3 +1,12 @@
+VERSÃO 2.3 — VISUAL UNIFICADO E TEMA GLOBAL
+O visual do atendimento agora é a referência das demais telas administrativas.
+O tema claro/escuro funciona nos painéis da loja e da Inova, no atendimento e no PDV.
+Sua escolha fica salva no navegador e é compartilhada entre abas da mesma origem.
+A visão geral também oferece atalhos para novo pedido, atendimento e cadastro de cliente.
+Não há nova migração SQL. Preserve .env, .tenants, .wwebjs_auth e .whatsapp-desk.json.
+Pare o servidor, atualize os arquivos do projeto, execute npm ci e npm start.
+Pressione Ctrl+F5 no navegador para carregar os estilos e scripts novos.
+
 VERSÃO 2.2 — LISTAS DE LOCALIDADES, VÁRIAS RETIRADAS E DESEMPENHO
 Não há nova migração SQL se você já utiliza a plataforma 2.0/2.1.
 Pare o servidor, atualize os arquivos preservando .env e as pastas de sessões,

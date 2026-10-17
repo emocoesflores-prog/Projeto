@@ -39,3 +39,5 @@ async function checkAccess(){if(legacyMode||checkingAccess||(!account&&!billingB
 setInterval(checkAccess,10000);window.addEventListener('focus',checkAccess);document.addEventListener('visibilitychange',checkAccess);
 
 PerformanceUI.init({auth,show:()=>showView('performance')});
+
+for(const b of document.querySelectorAll('[data-quick-action]'))b.onclick=()=>{if(!connected)return;if(b.dataset.quickAction==='order')FloristPOS.open();else if(b.dataset.quickAction==='whatsapp')showView('whatsapp');else{showView('customers');$('#directory-new-client').click();}};
