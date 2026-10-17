@@ -36,6 +36,7 @@ function applyMutation(original,input){
    order.status=data.status;event(order,'status',`Etapa alterada para ${data.status}.`);break;
   case 'details':{
    if(['Saiu para entrega','Esperando retirada'].includes(order.status))throw new OrderError('Os dados de entrega não podem mudar após a expedição.');
+   if(data.details.pickupLocationId&&data.details.pickupLocationId!==order.pickupLocationId)throw new OrderError('O local de retirada deste pedido está preservado. Crie outro pedido para alterar a unidade.');
    if(data.details.fulfillment!==order.fulfillment)throw new OrderError('A modalidade não pode ser alterada: crie outro pedido para preservar o frete original.');
    if(data.details.date!==order.date&&data.details.date<today())throw new OrderError('O novo agendamento não pode ser no passado.',400);
    if(data.details.timeSlot&&(data.details.date!==order.date||data.details.timeSlot!==order.timeSlot)&&options.expired(data.details.date,data.details.timeSlot))throw new OrderError('A nova faixa de horário já terminou.',400);

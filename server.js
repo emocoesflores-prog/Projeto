@@ -23,7 +23,7 @@ let pool,demoSettings={...defaults};
 const store=createOrderStore({demo,getPool:()=>pool,getTenant:tenantId,multi});
 const customers=createCustomerStore({demo,getPool:()=>pool,getTenant:tenantId,multi});
 async function readSettings(){
- if(multi){const tenant=await platformStore.tenant(tenantId());if(!tenant?.active)throw new OrderError('Loja indisponível.',404);return {orderingBlocked:require('./finance').access(tenant).blocked&&require('./finance').access(tenant).blockSite,deliveryFee:tenant.profile.deliveryFee??defaults.deliveryFee,deliveryRates:tenant.profile.deliveryRates||[],pickupAddress:tenant.profile.pickupAddress||'',assistantName:tenant.profile.assistantName||(tenant.id===DEFAULT_TENANT?'Florzinha':'Assistente'),deliveryCities:require('./tenant-context').policy(tenant).deliveryCities,name:tenant.name,slug:tenant.slug,city:tenant.profile.city||'',state:tenant.profile.state||'',phone:tenant.profile.phone||''};}
+ if(multi){const tenant=await platformStore.tenant(tenantId());if(!tenant?.active)throw new OrderError('Loja indisponível.',404);return {orderingBlocked:require('./finance').access(tenant).blocked&&require('./finance').access(tenant).blockSite,deliveryFee:tenant.profile.deliveryFee??defaults.deliveryFee,deliveryRates:tenant.profile.deliveryRates||[],pickupAddress:tenant.profile.pickupAddress||'',pickupLocations:tenant.profile.pickupLocations,assistantName:tenant.profile.assistantName||(tenant.id===DEFAULT_TENANT?'Florzinha':'Assistente'),deliveryCities:require('./tenant-context').policy(tenant).deliveryCities,name:tenant.name,slug:tenant.slug,city:tenant.profile.city||'',state:tenant.profile.state||'',phone:tenant.profile.phone||''};}
  if(demo)return {...demoSettings};
  const result=await pool.request().query('SELECT deliveryFee FROM dbo.StoreSettings WHERE id=1');
  if(!result.recordset.length)throw new Error('Configuração da loja ausente');
@@ -69,12 +69,14 @@ async function createOrder(body,source){
  if(source==='manual'&&body.scheduleMode==='scheduled'&&!data.timeSlot)throw new OrderError('Escolha o dia e a faixa de horário do agendamento.',400);
  if(data.timeSlot&&orderOptions.expired(data.date,data.timeSlot))throw new OrderError('Esta faixa de horário já terminou. Escolha outro agendamento.',400);
  const settings=await readSettings();
+ let pickupLocation;
+ if(data.fulfillment==='pickup'){const points=require('./public/pickup-locations').list(settings);pickupLocation=points.find(p=>p.id===data.pickupLocationId);if(!pickupLocation&&points.length>1)throw new OrderError('Selecione um local de retirada válido.',400);if(!pickupLocation&&data.pickupLocationId)throw new OrderError('O local de retirada mudou. Confira e selecione novamente.',400);pickupLocation||=points[0];if(pickupLocation)pickupLocation={...pickupLocation,formattedAddress:require('./public/pickup-locations').format(pickupLocation)};}
  const quote=require('./public/delivery-rates').quote(settings,data.city,data.neighborhood);if(data.fulfillment==='delivery'&&quote.fee===null)throw new OrderError(quote.error,400);
  const shippingFee=data.fulfillment==='delivery'?quote.fee:0;
  let amount;try{amount=total(data.items,catalog,data.fulfillment,shippingFee)}catch{throw new OrderError('Produto indisponível.',400)}
  const now=new Date().toISOString();
  const items=data.items.map(item=>{const p=catalog.find(p=>p.id===item.id);return {...item,name:p.name,unitPrice:p.price}});
- const order={...data,...(savedAddress?{deliveryAddress:Object.fromEntries(Object.entries(savedAddress).filter(([key])=>key!=='history'))}:{}),...(source==='manual'&&body.customerId?{customerId:body.customerId}:{}),customer:data.customer||'Consumidor final',recipient:data.recipient||data.customer||'Consumidor final',customerIdentified:!!(data.customer||data.phone),items,id:randomUUID(),createdAt:now,version:0,source,status:'Aguardando pagamento',paymentStatus:'pending',shippingFee,total:amount,checklist:{arrangement:false,card:false,packaging:false},history:[{at:now,actor:source==='site'?'Cliente pelo site':'Administrador',type:'created',description:'Pedido registrado. Aguardando confirmação de recebimento.'}]};
+ const order={...data,...(pickupLocation?{pickupLocation,pickupLocationId:pickupLocation.id}:{}),...(savedAddress?{deliveryAddress:Object.fromEntries(Object.entries(savedAddress).filter(([key])=>key!=='history'))}:{}),...(source==='manual'&&body.customerId?{customerId:body.customerId}:{}),customer:data.customer||'Consumidor final',recipient:data.recipient||data.customer||'Consumidor final',customerIdentified:!!(data.customer||data.phone),items,id:randomUUID(),createdAt:now,version:0,source,status:'Aguardando pagamento',paymentStatus:'pending',shippingFee,total:amount,checklist:{arrangement:false,card:false,packaging:false},history:[{at:now,actor:source==='site'?'Cliente pelo site':'Administrador',type:'created',description:'Pedido registrado. Aguardando confirmação de recebimento.'}]};
  await store.insert(order);return order;
 }
 app.post('/api/orders',async(req,res,next)=>{try{const order=await createOrder(req.body,'site');res.status(201).json({id:order.id,total:order.total,shippingFee:order.shippingFee,paymentStatus:'pending',paymentAvailable:false,mode:demo?'demo':'sqlserver'})}catch(e){next(e)}});
@@ -87,11 +89,16 @@ app.use('/api/admin',(req,res,next)=>{
 const whatsappService = require('./whatsapp-service').createWhatsAppService();
 const legacyWhatsAppRouter=require('./whatsapp-routes')(whatsappService);
 app.use('/api/admin/whatsapp',async(req,res,next)=>{try{const router=multi?(await tenantResources.get(req.account.user.tenantId)).router:legacyWhatsAppRouter;router(req,res,next);}catch(e){next(e)}});
+app.get('/api/admin/performance',async(req,res,next)=>{try{const analytics=require('./analytics'),period=analytics.range(req.query);const [result,clients,products,settings]=await Promise.all([store.analytics(period.from,period.to),customers.analytics(period.from,period.to),readCatalog(),readSettings()]);res.json(analytics.summarize(result.orders,products,clients,period.labels,{truncated:result.truncated,pickupLocations:require('./public/pickup-locations').list(settings)}));}catch(e){next(e)}});
+const localities=require('./locality-service').createLocalityService();
+app.get('/api/admin/locations/cities',(req,res)=>{if(typeof (req.query.q||'')!=='string'||String(req.query.q||'').length>100)return res.status(400).json({error:'Pesquise uma cidade com até 100 caracteres.'});res.json(localities.searchCities(req.query.q||'',String(req.query.state||'').slice(0,2)));});
+app.get('/api/admin/locations/cities/:id/neighborhoods',async(req,res,next)=>{try{res.json(await localities.neighborhoods(req.params.id))}catch(e){next(e)}});
 app.get('/api/admin/delivery-settings',async(req,res,next)=>{try{res.json(await readSettings())}catch(e){next(e)}});
 app.put('/api/admin/delivery-settings',async(req,res,next)=>{try{
  if(!multi)throw new OrderError('Ative o modo de plataforma para configurar entregas por cidade e bairro.',400);
  const parsed=require('./delivery-settings').deliverySettingsSchema.safeParse(req.body);if(!parsed.success)throw new OrderError(parsed.error.issues[0]?.message||'Confira as taxas de entrega.',400);
  const profile={...parsed.data,deliveryCities:[...new Set(parsed.data.deliveryRates.map(r=>r.city))],deliveryFee:0};
+ if(parsed.data.pickupLocations!==undefined)profile.pickupAddress=parsed.data.pickupLocations.length?require('./public/pickup-locations').format(parsed.data.pickupLocations[0]):'';else if(parsed.data.pickupAddress!==undefined)profile.pickupLocations=undefined;
  await platformStore.saveTenant(tenantId(),{profile});res.json(await readSettings());
 }catch(e){next(e)}});
 app.get('/api/admin/assistant-settings',async(req,res,next)=>{try{const settings=await readSettings();res.json({assistantName:settings.assistantName||'Florzinha'})}catch(e){next(e)}});

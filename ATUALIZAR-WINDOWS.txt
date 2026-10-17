@@ -1,3 +1,14 @@
+VERSÃO 2.2 — LISTAS DE LOCALIDADES, VÁRIAS RETIRADAS E DESEMPENHO
+Não há nova migração SQL se você já utiliza a plataforma 2.0/2.1.
+Pare o servidor, atualize os arquivos preservando .env e as pastas de sessões,
+execute npm ci e npm start e pressione Ctrl+F5 no navegador.
+Entregas: pesquise e selecione a cidade (com UF) e seus bairros.
+Bairros dependem de sugestões do OpenStreetMap; digitação manual continua disponível.
+Retirada na loja: cadastre vários locais com CEP automático e defina o principal.
+Site e PDV permitem escolher a unidade; pedidos preservam o endereço escolhido.
+Desempenho: nove análises com período e gráficos de dados da própria floricultura.
+Descontos ficam sem gráficos enquanto não houver registro de descontos nos pedidos.
+
 VERSÃO 2.1 — CADASTRO INOVA, ENTREGAS E FINANCEIRO
 Se já utiliza a plataforma 2.0, não execute outra migração SQL para esta atualização.
 Pare o servidor com Ctrl+C, atualize os arquivos do projeto preservando .env, .tenants,

@@ -33,6 +33,13 @@ function createCustomerStore({ demo, getPool, getTenant=()=>require('./tenant-co
   const scoped=request=>multi?request.input('tenantId',sql.UniqueIdentifier,getTenant()):request;
   function decode(row) { const { payload, phoneKey, ...columns } = row; return { ...JSON.parse(payload), ...columns, phone: phoneKey }; }
   return {
+    async analytics(from,to){
+      const counts=items=>{const map=new Map();for(const item of items){const label=item||'Não informado';map.set(label,(map.get(label)||0)+1);}return [...map].map(([label,value])=>({label,value}));};
+      if(demo){const all=rows();return {total:all.length,createdInPeriod:all.filter(c=>c.createdAt>=from.toISOString()&&c.createdAt<to.toISOString()).length,emailCount:all.filter(c=>c.email).length,cities:counts(all.map(c=>c.city)),genders:counts(all.map(c=>c.gender))};}
+      const scope=multi?' WHERE tenantId=@tenantId':'';
+      const result=await scoped(getPool().request()).input('from',sql.DateTime2,from).input('to',sql.DateTime2,to).query("SELECT COUNT(*) total,COALESCE(SUM(CASE WHEN createdAt>=@from AND createdAt<@to THEN 1 ELSE 0 END),0) createdInPeriod,COALESCE(SUM(CASE WHEN COALESCE(JSON_VALUE(payload,'$.email'),'')<>'' THEN 1 ELSE 0 END),0) emailCount FROM dbo.Customers"+scope+"; SELECT COALESCE(NULLIF(JSON_VALUE(payload,'$.city'),''),'Não informado') label,COUNT(*) value FROM dbo.Customers"+scope+" GROUP BY COALESCE(NULLIF(JSON_VALUE(payload,'$.city'),''),'Não informado'); SELECT COALESCE(NULLIF(JSON_VALUE(payload,'$.gender'),''),'Não informado') label,COUNT(*) value FROM dbo.Customers"+scope+" GROUP BY COALESCE(NULLIF(JSON_VALUE(payload,'$.gender'),''),'Não informado');");
+      return {...result.recordsets[0][0],cities:result.recordsets[1],genders:result.recordsets[2]};
+    },
     async search(query = '') {
       const digits = query.replace(/\D/g, '');
       if (demo) return rows().filter(customer => !query || fold(customer.name).includes(fold(query)) || (digits && customer.phone.includes(digits))).sort((a,b) => a.name.localeCompare(b.name,'pt-BR')).slice(0,20).map(({ id, name, phone, createdAt }) => ({ id, name, phone, createdAt }));
