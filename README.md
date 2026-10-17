@@ -173,3 +173,9 @@ npm start
 ```
 
 O comando `install-scripts approve` aplica-se ao npm que apresenta essa solicitação de aprovação; versões sem esse comando não precisam dessa etapa. A instalação explícita do Chrome é útil quando o download automático foi bloqueado. Nesta atualização, `npm audit` retornou zero vulnerabilidades conhecidas. Os avisos de descontinuação de `glob` e `fluent-ffmpeg` ainda vêm de dependências transitivas e não significam falha de instalação. Atualizações futuras podem mudar o resultado da auditoria.
+
+### Sessão vinculada que fica iniciando
+
+A sessão salva pode ser restaurada sem um novo QR Code. A configuração usa a página atual do WhatsApp Web (`webVersionCache: none`) e a identificação real do Chrome (`userAgent: false`), evitando reutilizar HTML antigo e o identificador Chrome 101 padrão da biblioteca. Isso não apaga `.wwebjs_auth` nem desconecta o celular.
+
+Para diagnosticar no Windows, pare o servidor com Ctrl+C, acrescente `WHATSAPP_HEADLESS=false` ao `.env` existente e execute `npm start`. Clique em Conectar WhatsApp e examine a janela do Chrome aberta pelo sistema. Não abra manualmente outra janela com o mesmo perfil. Informe apenas o texto da tela; não compartilhe QR Codes, mensagens ou dados de clientes. Após a correção, volte a `WHATSAPP_HEADLESS=true` e reinicie o servidor. A autenticação também tem limite de espera; excedê-lo fecha o navegador sem executar logout nem apagar a sessão. As verificações automatizadas não substituem o teste com uma conta real.
