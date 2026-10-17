@@ -7,6 +7,14 @@ test('Plataforma: login, lojas isoladas, administração principal, nomes de IA 
  async function login(username,password){const management=username.replace(/\D/g,'')==='53770070000195';const r=await api('/api/auth'+(management?'/management':'')+'/login',{username,password});assert.equal(r.status,200,JSON.stringify(r.data));assert.ok(r.cookie);return {...r.data,cookie:r.cookie};}
  try{
   assert.equal((await api('/api/admin/orders')).status,401);assert.equal((await api('/api/admin/orders',undefined,null,'GET',{Authorization:'Bearer '+process.env.ADMIN_TOKEN})).status,401);
+  const originalKey=process.env.ADMIN_TOKEN;
+  for(const key of ['', 'short-key']){
+   process.env.ADMIN_TOKEN=key;
+   const invalid=await api('/api/auth/bootstrap',{setupKey:key||'any-key',name:'Administrador Teste',username:'53770070000195',password:'senha-forte-principal'});
+   assert.equal(invalid.status,503);assert.match(invalid.data.error,/mínimo 16 caracteres/);
+   assert.equal((await api('/api/auth/state')).data.setupRequired,true);
+  }
+  process.env.ADMIN_TOKEN=originalKey;
   assert.equal((await api('/api/auth/bootstrap',{setupKey:'wrong',name:'Administrador Teste',username:'53.770.070/0001-95',password:'senha-forte-principal'})).status,401);
   assert.equal((await api('/api/auth/bootstrap',{setupKey:process.env.ADMIN_TOKEN,name:'Administrador Teste',username:'53.770.070/0001-95',password:'senha-forte-principal'})).status,201);
   assert.equal((await api('/api/auth/bootstrap',{setupKey:process.env.ADMIN_TOKEN,name:'Outro Administrador',username:'outro',password:'senha-forte-principal'})).status,409);

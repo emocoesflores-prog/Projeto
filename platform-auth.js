@@ -25,7 +25,9 @@ function createPlatformAuth(store,{onTenantStopped=async()=>{}}={}){
  router.post('/bootstrap',limiter,async(req,res,next)=>{try{
   if(await store.hasUsers())throw Object.assign(Error('O administrador principal já foi criado.'),{status:409});
   const data=parse(z.object({setupKey:z.string().min(1).max(256),name:z.string().trim().min(3).max(120),username,password}).strict(),req.body);
-  const expected=process.env.ADMIN_TOKEN||'';if(expected.length<16||!timingSafeEqual(Buffer.from(hash(data.setupKey)),Buffer.from(hash(expected))))throw Object.assign(Error('Chave de configuração inválida. Confira ADMIN_TOKEN no servidor.'),{status:401});
+  const expected=process.env.ADMIN_TOKEN||'';
+  if(expected.length<16)return res.status(503).json({error:'O ADMIN_TOKEN carregado pelo servidor precisa ter no mínimo 16 caracteres. Atualize o .env e reinicie o servidor com npm start.'});
+  if(!timingSafeEqual(Buffer.from(hash(data.setupKey)),Buffer.from(hash(expected))))throw Object.assign(Error('A chave informada não corresponde ao ADMIN_TOKEN carregado pelo servidor. Confira o .env da pasta do projeto e reinicie o servidor após alterá-lo.'),{status:401});
   await store.create({bootstrap:true,user:{id:randomUUID(),tenantId:PLATFORM_TENANT,name:data.name,username:data.username,passwordHash:await hashPassword(data.password),role:'master',active:true}});res.status(201).json({ok:true});
  }catch(e){next(e)}});
  const dummy=hashPassword(randomBytes(24).toString('hex'));
