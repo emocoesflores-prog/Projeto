@@ -172,3 +172,8 @@ VERSÃO 2.4.0 — ATENDIMENTO E HISTÓRICO DE PEDIDOS
 7. Não substitua o ADMIN_TOKEN pela chave de criptografia. CHANNELS_ENCRYPTION_KEY é uma chave separada e precisa ser preservada junto ao backup privado.
 8. Os novos canais têm leitura e resposta de texto; dependem de aplicativos e permissões reais dos provedores. As contas reais ainda precisam ser homologadas pela Inova. Não há liberação automática por instalar esta versão.
 9. Os temas claro/escuro valem para todo o painel administrativo e usam azul, branco e cinza.
+
+VERSÃO 2.4.1 — IDENTIFICAÇÃO DOS CANAIS
+
+Cada conversa mostra nome e ícone do canal com cores próprias: WhatsApp verde, Instagram em degradê, Facebook azul, Gmail vermelho e Outlook azul. Abas, cabeçalho e contato também identificam a origem. A interface geral continua azul, branca e cinza.
+Cada floricultura autoriza suas próprias contas. Gmail/Outlook podem ser pessoais ou empresariais conforme as permissões do provedor; Facebook atende mensagens de Páginas, e Instagram exige conta profissional vinculada à Página. O aplicativo da Inova precisa das aprovações dos provedores para atender outras empresas. As conversas estão na mesma tela Atendimento, separadas por abas de canal.

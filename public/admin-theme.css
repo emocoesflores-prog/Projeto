@@ -214,3 +214,27 @@
 @media(max-height:600px) and (max-width:1000px){:root[data-admin-theme] .dashboard .wa-top{max-height:110px;gap:4px;padding:5px 10px}:root[data-admin-theme] .dashboard .wa-top>div:last-child{flex-wrap:nowrap;width:100%;max-width:100%;overflow-x:auto}:root[data-admin-theme] .dashboard .wa-top .secondary{flex-shrink:0;font-size:13px!important;padding:6px 8px!important}:root[data-admin-theme] .dashboard #wa-status{flex-shrink:0}:root[data-admin-theme] .dashboard .wa-thread-name h2{font-size:17px}:root[data-admin-theme] .dashboard .wa-metrics{padding:4px 10px;min-height:28px}:root[data-admin-theme] .dashboard .attendance-channel-tabs{padding:4px 10px}}
 @media(max-height:600px) and (max-width:1000px){:root[data-admin-theme] .dashboard #view-whatsapp .wa-thread-head{min-height:52px}:root[data-admin-theme] .dashboard #view-whatsapp .wa-thread-name h2{font-size:17px}}
 @media(max-height:450px) and (max-width:1000px){:root[data-admin-theme] .dashboard .wa-top{min-height:0}:root[data-admin-theme] .dashboard .wa-top>div:first-child,:root[data-admin-theme] .dashboard .wa-metrics{display:none}:root[data-admin-theme] .dashboard .wa-top>div:last-child{scrollbar-width:none}:root[data-admin-theme] .dashboard .wa-messages{padding:8px 10px}}
+/* Cores dos aplicativos somente na identificação dos canais. */
+[data-channel-brand]{--channel-color:#526277;--channel-bg:#e9eef4;--channel-border:#c8d3df}
+[data-channel-brand=whatsapp]{--channel-color:#075e54;--channel-bg:#e3f8ec;--channel-border:#96d9b3}
+[data-channel-brand=instagram]{--channel-color:#96235e;--channel-bg:#fff0f7;--channel-border:#efb4d1}
+[data-channel-brand=facebook]{--channel-color:#1453a1;--channel-bg:#e8f0ff;--channel-border:#a9c7f4}
+[data-channel-brand=gmail]{--channel-color:#a52821;--channel-bg:#fff0ee;--channel-border:#f0b2ac}
+[data-channel-brand=outlook]{--channel-color:#005a9e;--channel-bg:#e4f4ff;--channel-border:#9dcbed}
+:root[data-admin-theme=dark] [data-channel-brand]{--channel-color:#d0dae6;--channel-bg:#293747;--channel-border:#526277}
+:root[data-admin-theme=dark] [data-channel-brand=whatsapp]{--channel-color:#91efb5;--channel-bg:#153c2b;--channel-border:#2c8053}
+:root[data-admin-theme=dark] [data-channel-brand=instagram]{--channel-color:#ffbde0;--channel-bg:#49223b;--channel-border:#9b4d7c}
+:root[data-admin-theme=dark] [data-channel-brand=facebook]{--channel-color:#a9ceff;--channel-bg:#203c60;--channel-border:#477bb5}
+:root[data-admin-theme=dark] [data-channel-brand=gmail]{--channel-color:#ffb9b1;--channel-bg:#492a2a;--channel-border:#99594e}
+:root[data-admin-theme=dark] [data-channel-brand=outlook]{--channel-color:#a0d9ff;--channel-bg:#193d58;--channel-border:#397fba}
+.channel-brand-icon{width:18px;height:18px;flex-shrink:0;display:inline-block;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+:root[data-admin-theme] .dashboard .attendance-channel-badge{display:inline-flex;align-items:center;gap:6px;width:max-content;max-width:100%;background:var(--channel-bg);color:var(--channel-color);border:1px solid var(--channel-border);border-radius:20px;padding:3px 9px;font:500 13px/1.5 system-ui,sans-serif;white-space:nowrap}
+:root[data-admin-theme] .dashboard .attendance-channel-badge span{color:inherit;font:inherit}
+.wa-chat-text>.attendance-channel-badge{margin-top:6px}
+:root[data-admin-theme] .dashboard .attendance-channel-tabs button[data-channel-brand]{display:inline-flex;align-items:center;gap:7px;color:var(--channel-color)}
+:root[data-admin-theme] .dashboard .attendance-channel-tabs button[data-channel-brand][aria-pressed=true]{background:var(--channel-bg);color:var(--channel-color);border-color:var(--channel-border)}
+:root[data-admin-theme] .dashboard .wa-top button[data-channel-brand]{display:inline-flex;align-items:center;gap:6px}
+:root[data-admin-theme] .dashboard .wa-top button[data-channel-brand] .channel-brand-icon{color:var(--channel-color)}
+[data-channel-brand=instagram] .channel-brand-icon{border-radius:5px;background:linear-gradient(35deg,#feda75,#d62976 55%,#4f5bd5);color:white;padding:2px;width:20px;height:20px}
+@media(max-width:760px){:root[data-admin-theme] .dashboard .attendance-channel-tabs button[data-channel-brand]{gap:5px}.channel-brand-icon{width:16px;height:16px}}
+:root[data-admin-theme] .dashboard .wa-top .wa-channel.attendance-channel-badge{display:inline-flex}
