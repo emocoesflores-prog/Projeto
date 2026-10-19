@@ -1,6 +1,6 @@
 /* One preference for every administrative page, applied before the first paint. */
 window.AdminTheme=(()=>{
- const key='admin-theme';let theme='dark';
+ const key='admin-theme';let theme='light';
  try{const saved=localStorage.getItem(key)||localStorage.getItem('wa-theme');if(saved==='light'||saved==='dark')theme=saved;}catch{}
  function sync(){document.documentElement.dataset.adminTheme=theme;document.documentElement.style.colorScheme=theme;if(document.body)document.body.classList.toggle('wa-light',theme==='light');for(const b of document.querySelectorAll('[data-theme-toggle],#wa-theme')){b.setAttribute('data-theme-toggle','');b.classList.add('theme-toggle');b.textContent=(theme==='dark'?'☀  Tema claro':'☾  Tema escuro');b.setAttribute('aria-label',theme==='dark'?'Ativar tema claro em todos os painéis':'Ativar tema escuro em todos os painéis');b.setAttribute('aria-pressed',String(theme==='dark'));b.title='Alternar tema de todas as telas';}}
  function apply(value,{save=true}={}){if(!['dark','light'].includes(value))return;theme=value;sync();if(save)try{localStorage.setItem(key,theme);localStorage.setItem('wa-theme',theme);}catch{}document.dispatchEvent(new CustomEvent('admin-theme-change',{detail:{theme}}));}

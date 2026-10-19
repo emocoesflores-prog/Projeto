@@ -13,7 +13,7 @@ window.DeliverySettingsUI=(()=>{
    const data=await request('locations/cities/'+id+'/neighborhoods',signal);if(ticket!==neighborhoodSequence||city.value!==chosen)return {items:[]};
    const existing=[...el('delivery-rate-rows').children].filter(r=>normal(r.querySelector('[name=city]').value)===normal(chosen)).map(r=>r.querySelector('[name=neighborhood]').value).filter(Boolean);
    const names=[...new Set([...data.neighborhoods,...existing])].filter(n=>normal(n).includes(normal(q))).sort((a,b)=>a.localeCompare(b,'pt-BR')).slice(0,80);
-   return {items:[...(!q?[{value:'',label:'Todos os bairros · taxa geral da cidade'}]:[]),...names.map(n=>({value:n,label:n}))],message:data.message||'Nenhum bairro encontrado. Você pode digitar manualmente.'};
+   return {items:[...(!q?[{value:'',label:'Todos os bairros · taxa geral da cidade'}]:[]),...names.map(n=>({value:n,label:n}))],message:data.message||(!names.length?'Nenhum bairro encontrado. Você pode digitar manualmente.':undefined)};
   },onSelect(){}});
   const remove=document.createElement('button');remove.type='button';remove.className='secondary';remove.textContent='Remover';remove.setAttribute('aria-label','Remover cidade e bairro');const dispose=()=>{cityPicker.close();neighborhoodPicker.close();neighborhoodSequence++;};cleanups.push(dispose);remove.onclick=()=>{dispose();item.remove();};item.append(remove);el('delivery-rate-rows').append(item);return item;
  }

@@ -1,0 +1,41 @@
+/* Identidade compartilhada: fontes locais OFL, creme, rosa e lavanda. */
+@font-face{font-family:Quicksand;src:url('/fonts/quicksand-700.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:Quicksand;src:url('/fonts/quicksand-600.woff2') format('woff2');font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:'Nunito Sans';src:url('/fonts/nunito-sans-400.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'Nunito Sans';src:url('/fonts/nunito-sans-600.woff2') format('woff2');font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:'Nunito Sans';src:url('/fonts/nunito-sans-700.woff2') format('woff2');font-weight:700 900;font-style:normal;font-display:swap}
+:root{--premium-bg:#fbf3e7;--premium-text:#35232b;--premium-muted:#775b65;--premium-pink:#b63462;--premium-soft:#fde3ec;--premium-lavender:#eee2fb;--premium-yellow:#fff0c5;--premium-mint:#e1f2e7;--premium-line:#eed9d7;--premium-radius:24px}
+:root[data-admin-theme=light]{--ui-bg:#fbf3e7;--ui-panel:#fffdf9;--ui-raised:#fff6f1;--ui-input:#fff8f4;--ui-line:#e7cfce;--ui-text:#35232b;--ui-muted:#775b65;--ui-accent:#aa2d57;--ui-accent-text:#fff;--ui-soft:#fbe0e9;--ui-hover:#fff0f5;--ui-info:#6f4296;--ui-info-bg:#f0e5fa;--ui-shadow:0 8px 28px #6f3f4f0a;--ui-radius:18px}
+:root[data-admin-theme=dark]{--ui-bg:#211a26;--ui-panel:#2c2330;--ui-raised:#382b3b;--ui-input:#352936;--ui-line:#674c60;--ui-text:#fff4f7;--ui-muted:#d7bbc9;--ui-accent:#ffa9c7;--ui-accent-text:#3b172a;--ui-soft:#523349;--ui-hover:#493144;--ui-info:#d7b8ff;--ui-info-bg:#3d2b50;--ui-shadow:0 8px 28px #10091430;--ui-radius:18px}
+:root[data-admin-theme] .dashboard{font-family:'Nunito Sans',system-ui,sans-serif;font-size:16px;line-height:1.6}
+:root[data-admin-theme] .dashboard :is(h1,h2,h3,h4,.brand,.metric strong,.day-count,.pdv-brand strong){font-family:Quicksand,'Nunito Sans',system-ui,sans-serif;font-weight:700;letter-spacing:-.025em}
+:root[data-admin-theme] .dashboard :is(button,input,select,textarea,label,table){font-family:'Nunito Sans',system-ui,sans-serif}
+:root[data-admin-theme] .dashboard .brand{font-size:22px;line-height:1.35;color:var(--ui-accent)}
+:root[data-admin-theme] .dashboard :is(.metric,.attention-card,.day-card,.platform-card,.finance-card,.customer-profile,.settings-panel,.delivery-settings,.catalog-card,.performance-card,.performance-chart){border-radius:20px;box-shadow:var(--ui-shadow)}
+:root[data-admin-theme] .dashboard :is(button,.button,.secondary){border-radius:12px;transition:background .18s,box-shadow .18s,transform .18s}
+:root[data-admin-theme] .dashboard :is(button,.button):hover:not(:disabled){box-shadow:0 5px 14px #7b465111}
+:root[data-admin-theme] .dashboard :is(input,select,textarea){border-radius:12px}
+:root[data-admin-theme] .dashboard .sidebar nav button{border-radius:14px}
+:root[data-admin-theme] .dashboard .page-heading h1{font-size:clamp(28px,3vw,38px);line-height:1.25}
+:root[data-admin-theme] .dashboard .metric{position:relative;overflow:hidden;border-top:3px solid var(--ui-accent)}
+:root[data-admin-theme=light] .dashboard .metric:nth-child(2){background:#fff7d9;border-color:#e9c45e}
+:root[data-admin-theme=light] .dashboard .metric:nth-child(3){background:#f2e9ff;border-color:#b797d8}
+:root[data-admin-theme=light] .dashboard .metric:nth-child(4){background:#ffedf2;border-color:#d7a3b5}
+:root[data-admin-theme] .dashboard :is(.platform-card,.pickup-point,.customer-editor,.customer-detail,.rate-row,.performance-section){scroll-margin-top:100px}
+:root[data-admin-theme] .dashboard .locality-options{background:var(--ui-panel);border:1px solid var(--ui-line);border-radius:14px;box-shadow:0 12px 28px #58313d20}
+:root[data-admin-theme] .dashboard .locality-options button{background:var(--ui-panel);color:var(--ui-text);border-radius:0;min-height:44px}
+:root[data-admin-theme] .dashboard .locality-options button:hover,:root[data-admin-theme] .dashboard .locality-options button[aria-selected=true]{background:var(--ui-soft);color:var(--ui-accent)}
+:root[data-admin-theme] .dashboard .locality-options>span{color:var(--ui-muted);font-size:14px}
+:root[data-admin-theme] .dashboard .wa-thread-name h2{font-family:Quicksand,'Nunito Sans',sans-serif;font-size:20px}
+:root[data-admin-theme=light] .dashboard .wa-bubble.mine{background:#fde1ea;color:#3d2731}
+:root[data-admin-theme=dark] .dashboard .wa-bubble.mine{background:#59334c;color:#fff1f5}
+:root[data-admin-theme] .dashboard .wa-context section{border-radius:16px}
+:root[data-admin-theme] .dashboard .illustrated-product{overflow:hidden;position:relative;display:grid;place-items:center}
+:root[data-admin-theme] .dashboard .illustrated-product>img{display:block;width:100%;height:100%;object-fit:contain;max-height:260px}
+:root[data-admin-theme] .dashboard .pdv-product-art.illustrated-product{height:185px}
+:root[data-admin-theme] .dashboard .pdv-product-art.illustrated-product>img{height:185px}
+:root[data-admin-theme] .dashboard .catalog-art.illustrated-product{height:250px}
+:root[data-admin-theme] .dashboard :focus-visible{outline:3px solid var(--ui-accent);outline-offset:3px}
+@media(max-width:760px){:root[data-admin-theme] .dashboard .page-heading h1{font-size:28px}:root[data-admin-theme] .dashboard .brand{font-size:20px}:root[data-admin-theme] .dashboard .wa-thread-name h2{font-size:17px}:root[data-admin-theme] .dashboard .pdv-product-art.illustrated-product,:root[data-admin-theme] .dashboard .pdv-product-art.illustrated-product>img{height:135px}}
+@media(prefers-reduced-motion:reduce){:root[data-admin-theme] .dashboard *{transition:none!important;scroll-behavior:auto!important}}
+@media(max-width:760px){:root[data-admin-theme] .dashboard .desk-filters{min-width:0}:root[data-admin-theme] .dashboard .desk-filters>button{max-width:100%;min-width:0;white-space:normal;overflow-wrap:anywhere}:root[data-admin-theme] .dashboard #desk-layout{width:100%}}

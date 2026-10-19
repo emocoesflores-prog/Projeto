@@ -177,3 +177,11 @@ VERSÃO 2.4.1 — IDENTIFICAÇÃO DOS CANAIS
 
 Cada conversa mostra nome e ícone do canal com cores próprias: WhatsApp verde, Instagram em degradê, Facebook azul, Gmail vermelho e Outlook azul. Abas, cabeçalho e contato também identificam a origem. A interface geral continua azul, branca e cinza.
 Cada floricultura autoriza suas próprias contas. Gmail/Outlook podem ser pessoais ou empresariais conforme as permissões do provedor; Facebook atende mensagens de Páginas, e Instagram exige conta profissional vinculada à Página. O aplicativo da Inova precisa das aprovações dos provedores para atender outras empresas. As conversas estão na mesma tela Atendimento, separadas por abas de canal.
+
+VERSÃO 2.5.0 — VISUAL INTEGRADO E BAIRROS DE MAUÁ
+
+Site e painéis agora usam a identidade creme, rosa e lavanda inspirada nos prints enviados, com fontes locais e temas claro/escuro. O site tem filtros por valor, ordenação, favoritos por loja e detalhes dos presentes em janela. As imagens incluídas são ilustrativas.
+
+Mauá/SP tem 62 sugestões de bairros disponíveis sem internet. Escolha Mauá / SP na lista de cidades e abra Bairro; os nomes aparecem imediatamente. Se um nome não estiver entre as sugestões, pode digitá-lo e salvar. Outras cidades consultam ViaCEP e usam OpenStreetMap como alternativa. Não se trata de lista oficial ou completa de bairros.
+
+Atualize preservando seus arquivos privados, rode npm ci, npm start e Ctrl+F5. Não é necessária nova migração SQL para esta versão. Consulte VISUAL-E-BAIRROS.md para detalhes.
