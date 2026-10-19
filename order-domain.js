@@ -22,7 +22,7 @@ function applyMutation(original,input){
   case 'payment':
    if(order.paymentStatus==='paid')throw new OrderError('O pagamento já foi registrado.');
    order.paymentStatus='paid';order.payment={method:order.paymentMethod,amount:order.total,reference:data.reference,recordedAt:new Date().toISOString(),source:'manual'};order.status=order.scheduleMode==='now'?'Recebido':'Agendado';
-   event(order,'payment',`Recebimento integral registrado manualmente (${order.paymentMethod==='pix'?'PIX':'cartão de crédito'}). Referência: ${data.reference}. Sem cobrança ou verificação bancária pelo sistema.`);break;
+   event(order,'payment',`Recebimento integral registrado manualmente (${require('./public/shop-rules').paymentLabel(order.paymentMethod,order.paymentMethodName)}). Referência: ${data.reference}. Sem cobrança ou verificação bancária pelo sistema.`);break;
   case 'status':
    if(data.status==='Cancelado'){
     if(data.reason.length<3)throw new OrderError('Informe o motivo do cancelamento.',400);

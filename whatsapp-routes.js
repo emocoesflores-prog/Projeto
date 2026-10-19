@@ -6,12 +6,12 @@ function whatsappRoutes(service, desk = require('./whatsapp-desk-store').createD
   router.get('/events',(req,res)=>{
     if(!service.subscribe)return res.sendStatus(204);
     res.set({'Content-Type':'text/event-stream','Cache-Control':'no-store','Connection':'keep-alive','X-Accel-Buffering':'no'});res.flushHeaders();
-    const send=state=>{void(async()=>{if(req.validateSession&&!await req.validateSession()){res.end();return;}if(!res.destroyed)res.write('data: '+JSON.stringify({...state,aiConfigured:florzinha.configured()})+'\n\n');})().catch(()=>res.end());};
+    const send=state=>{void(async()=>{if(req.validateSession&&!await req.validateSession()){res.end();return;}if(!res.destroyed)res.write('data: '+JSON.stringify({...state,aiConfigured:await florzinha.configured()})+'\n\n');})().catch(()=>res.end());};
     const unsubscribe=service.subscribe(send);send(service.status());
     const heartbeat=setInterval(()=>{void(async()=>{if(req.validateSession&&!await req.validateSession())return res.end();res.write(': heartbeat\n\n');})().catch(()=>res.end());},15000);heartbeat.unref?.();
     req.on('close',()=>{clearInterval(heartbeat);unsubscribe();});
   });
-  router.get('/status', async (req,res,next) => { try { const state = service.refreshStatus ? await service.refreshStatus() : service.status(); res.json({ ...state, aiConfigured: florzinha.configured() }); } catch(e) { next(e); } });
+  router.get('/status', async (req,res,next) => { try { const state = service.refreshStatus ? await service.refreshStatus() : service.status(); res.json({ ...state, aiConfigured: await florzinha.configured() }); } catch(e) { next(e); } });
   router.post('/connect', async (req,res,next) => { try { await service.connect(); res.status(202).json(service.status()); } catch(e) { next(e); } });
   router.post('/disconnect', async (req,res,next) => { try { await service.disconnect(); res.json(service.status()); } catch(e) { next(e); } });
   router.get('/chats', async (req,res,next) => { try { const metadata = await desk.all(); res.json((await service.chats()).map(chat => ({ ...chat, desk: metadata[chat.id] || {} }))); } catch(e) { next(e); } });

@@ -1,3 +1,14 @@
+VERSÃO 3.0 — OPERAÇÃO, CADASTROS E GESTÃO
+Leia MODULOS-DA-LOJA.md para conhecer os fluxos e as integrações necessárias.
+Pare o servidor, preserve .env, .tenants, .wwebjs_auth, .wwebjs_cache e .whatsapp-desk.json,
+atualize os arquivos, execute npm ci e npm start. No navegador use Ctrl+F5.
+Não há nova migração SQL para quem já utiliza a plataforma multi-loja.
+Categorias múltiplas, Oficina, rotas revisadas no mapa, entregadores, cupons, agenda,
+impressões, perfil, caixa, preferências e cadastro fiscal são individuais por loja.
+Rotas por ruas e cobrança por distância exigem serviço OpenRouteService configurado.
+Fiscal nesta versão cadastra parâmetros: ainda não emite notas ou transmite à SEFAZ.
+Pagamentos e reembolsos continuam sendo conferidos e registrados manualmente.
+
 VERSÃO 2.3.1 — PALETA AZUL E LETRAS MAIORES
 Azul, branco e cinza substituem a identidade verde nos painéis e no atendimento.
 Texto principal e campos em 16 px; botões e informações auxiliares também foram ampliados.

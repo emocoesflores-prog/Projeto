@@ -51,6 +51,52 @@ function createPlatformStore({demo,getPool}){
    }
    if(demo&&(!next.active||owner))await this.invalidateTenant(id);return safeTenant(next);
   },
+  async recordSiteEvent(id,event,device){
+   const update=t=>{const date=require('./public/order-options').localDate(),rows=t.profile.siteStats||[],row=rows.find(r=>r.date===date)||{date,view:0,cart:0,checkout:0,mobile:0,desktop:0};if(!rows.includes(row))rows.push(row);row[event]=(row[event]||0)+1;if(event==='view')row[device]=(row[device]||0)+1;t.profile.siteStats=rows.sort((a,b)=>a.date.localeCompare(b.date)).slice(-366);};
+   if(demo){const t=tenants.get(id);if(t)update(t);return;}
+   const tx=new sql.Transaction(getPool());await tx.begin(sql.ISOLATION_LEVEL.SERIALIZABLE);try{const row=(await new sql.Request(tx).input('id',sql.UniqueIdentifier,id).query('SELECT * FROM dbo.Tenants WITH(UPDLOCK,HOLDLOCK) WHERE id=@id')).recordset[0];if(row){const t=safeTenant(row);update(t);await new sql.Request(tx).input('id',sql.UniqueIdentifier,id).input('profile',sql.NVarChar(sql.MAX),JSON.stringify(t.profile)).query('UPDATE dbo.Tenants SET profile=@profile WHERE id=@id');}await tx.commit();}catch(e){try{await tx.rollback()}catch{}throw e;}
+  },
+  async changeOperations(id,input,{demoOrders,plan=null,routingConfigured=false}={}){
+   const domain=require('./shop-operations');
+   if(demo){const original=tenants.get(id);if(!original)return null;const result=domain.applyOperations(safeTenant(original),input,{orders:demoOrders.snapshot(),plan,routingConfigured});demoOrders.commitBatch(result.orders);tenants.set(id,result.tenant);return result;}
+   const tx=new sql.Transaction(getPool());await tx.begin(sql.ISOLATION_LEVEL.SERIALIZABLE);
+   try{
+    const row=(await new sql.Request(tx).input('id',sql.UniqueIdentifier,id).query('SELECT * FROM dbo.Tenants WITH(UPDLOCK,HOLDLOCK) WHERE id=@id')).recordset[0];
+    if(!row)throw Object.assign(Error('Floricultura não encontrada.'),{status:404});
+    const original=safeTenant(row),orders=[];
+    for(const orderId of [...new Set(domain.wantedIds(original,input,plan))].sort()){
+     if(!require('zod').z.uuid().safeParse(orderId).success)throw Object.assign(Error('Pedido inválido.'),{status:400});
+     const r=await new sql.Request(tx).input('tenant',sql.UniqueIdentifier,id).input('order',sql.UniqueIdentifier,orderId).query('SELECT * FROM dbo.Orders WITH(UPDLOCK,HOLDLOCK) WHERE tenantId=@tenant AND id=@order');
+     if(r.recordset.length)orders.push(require('./order-store').decode(r.recordset[0]));
+    }
+    const result=domain.applyOperations(original,input,{orders,plan,routingConfigured});
+    for(const o of result.orders)await new sql.Request(tx).input('tenant',sql.UniqueIdentifier,id).input('id',sql.UniqueIdentifier,o.id).input('status',sql.NVarChar(40),o.status).input('payload',sql.NVarChar(sql.MAX),JSON.stringify(o)).query('UPDATE dbo.Orders SET status=@status,payload=@payload WHERE tenantId=@tenant AND id=@id');
+    await new sql.Request(tx).input('id',sql.UniqueIdentifier,id).input('name',sql.NVarChar(120),result.tenant.name).input('profile',sql.NVarChar(sql.MAX),JSON.stringify(result.tenant.profile)).query('UPDATE dbo.Tenants SET name=@name,profile=@profile WHERE id=@id');
+    await tx.commit();return result;
+   }catch(e){try{await tx.rollback()}catch{}throw e;}
+  },
+  async insertShopOrder(id,order,{demoOrders,couponCode='',expectedTotal}){
+   const prepare=tenant=>{
+    const s=require('./shop-operations').state(tenant),rules=require('./public/shop-rules');
+    const issue=rules.issue(s.schedule,order);if(issue)throw Object.assign(Error(issue),{status:400});
+    const method=s.payments.find(m=>m.active&&m.id===order.paymentMethod);if(!method)throw Object.assign(Error('Esta forma de pagamento não está disponível.'),{status:400});
+    const list=tenant.profile.catalog||baseCatalog;for(const item of order.items){const p=list.find(p=>p.id===item.id&&p.active!==false);if(!p||p.price!==item.unitPrice)throw Object.assign(Error('O produto ou preço mudou. Atualize o pedido.'),{status:409});}
+    let discount;try{discount=rules.discount(s.coupons,couponCode,order.total-order.shippingFee);}catch(e){throw Object.assign(e,{status:400});}
+    const next={...order,total:order.total-discount.amount,discount:discount.coupon,paymentMethodName:method.name};
+    if(expectedTotal!==undefined&&expectedTotal!==next.total)throw Object.assign(Error('O total mudou. Confira o orçamento atualizado.'),{status:409});
+    if(discount.coupon){s.coupons.find(c=>c.id===discount.coupon.id).used++;s.revision++;tenant.profile.operations=s;}
+    return next;
+   };
+   if(demo){const tenant=safeTenant(tenants.get(id)),next=prepare(tenant);demoOrders.insertSync(next);tenants.set(id,tenant);return next;}
+   const tx=new sql.Transaction(getPool());await tx.begin(sql.ISOLATION_LEVEL.SERIALIZABLE);
+   try{
+    const row=(await new sql.Request(tx).input('id',sql.UniqueIdentifier,id).query('SELECT * FROM dbo.Tenants WITH(UPDLOCK,HOLDLOCK) WHERE id=@id')).recordset[0];if(!row)throw Error('Loja indisponível.');
+    const tenant=safeTenant(row),next=prepare(tenant);
+    await new sql.Request(tx).input('tenant',sql.UniqueIdentifier,id).input('id',sql.UniqueIdentifier,next.id).input('total',sql.Int,next.total).input('status',sql.NVarChar(40),next.status).input('payload',sql.NVarChar(sql.MAX),JSON.stringify(next)).query('INSERT INTO dbo.Orders(tenantId,id,total,status,payload) VALUES(@tenant,@id,@total,@status,@payload)');
+    if(next.discount)await new sql.Request(tx).input('id',sql.UniqueIdentifier,id).input('profile',sql.NVarChar(sql.MAX),JSON.stringify(tenant.profile)).query('UPDATE dbo.Tenants SET profile=@profile WHERE id=@id');
+    await tx.commit();return next;
+   }catch(e){try{await tx.rollback()}catch{}throw e;}
+  },
   async changeFinance(id,input,actor){
    const {change}=require('./finance');
    if(demo){const tenant=tenants.get(id);if(!tenant)return null;tenant.profile.billing=change(tenant.profile.billing,input,actor);return safeTenant(tenant);}

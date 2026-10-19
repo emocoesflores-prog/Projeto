@@ -13,7 +13,7 @@ const detailsObject=z.object({
  neighborhood:z.string().trim().max(100).default(''),
  fulfillment:z.enum(['store','pickup','delivery']),city:z.string().trim().max(100).refine(require('./tenant-context').serves,'Cidade fora da área de entrega desta floricultura.').optional(),address:z.string().trim().max(500).optional(),
  date:calendarDate,period:z.enum(['Manhã','Tarde']),
- scheduleMode:z.enum(['now','scheduled']).default('scheduled'),timeSlot:z.union([z.enum(options.slots),z.literal('')]).default(''),
+ scheduleMode:z.enum(['now','scheduled']).default('scheduled'),timeSlot:z.string().refine(s=>s===''||require('./public/shop-rules').validSlot(s),'Faixa de horário inválida.').default(''),
  message:z.string().max(500).default(''),anonymous:z.boolean().default(false),
  occasion:z.enum(['Sem ocasião específica','Aniversário','Amor e romance','Agradecimento','Maternidade','Condolências','Celebração']).default('Sem ocasião específica'),
  flowerNotes:z.string().trim().max(1000).default(''),deliveryNotes:z.string().trim().max(500).default(''),
@@ -28,7 +28,7 @@ function validateDelivery(data,ctx){
 }
 const detailsSchema=detailsObject.superRefine(validateDelivery);
 const schema=detailsObject.extend({
- paymentMethod:z.enum(['pix','credit_card']),
+ paymentMethod:z.string().regex(/^(pix|credit_card|debit_card|cash|bank_transfer|custom-[a-z0-9-]{1,30})$/),
  items:z.array(z.object({id:z.number().int().positive(),quantity:z.number().int().min(1).max(20),note:z.string().trim().max(300).default('')})).min(1).max(30)
 }).superRefine((data,ctx)=>{validateDelivery(data,ctx);if(data.date<today())ctx.addIssue({code:'custom',message:'Escolha hoje ou uma data futura.',path:['date']})});
 function total(items,catalog,fulfillment='delivery',shippingFee=2000){return items.reduce((sum,item)=>{const product=catalog.find(p=>p.id===item.id);if(!product)throw Error('Produto indisponível');return sum+product.price*item.quantity},0)+(fulfillment==='delivery'?shippingFee:0)}

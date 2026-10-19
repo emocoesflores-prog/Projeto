@@ -23,24 +23,24 @@ let pool,demoSettings={...defaults};
 const store=createOrderStore({demo,getPool:()=>pool,getTenant:tenantId,multi});
 const customers=createCustomerStore({demo,getPool:()=>pool,getTenant:tenantId,multi});
 async function readSettings(){
- if(multi){const tenant=await platformStore.tenant(tenantId());if(!tenant?.active)throw new OrderError('Loja indisponível.',404);return {orderingBlocked:require('./finance').access(tenant).blocked&&require('./finance').access(tenant).blockSite,deliveryFee:tenant.profile.deliveryFee??defaults.deliveryFee,deliveryRates:tenant.profile.deliveryRates||[],pickupAddress:tenant.profile.pickupAddress||'',pickupLocations:tenant.profile.pickupLocations,assistantName:tenant.profile.assistantName||(tenant.id===DEFAULT_TENANT?'Florzinha':'Assistente'),deliveryCities:require('./tenant-context').policy(tenant).deliveryCities,name:tenant.name,slug:tenant.slug,city:tenant.profile.city||'',state:tenant.profile.state||'',phone:tenant.profile.phone||''};}
+ if(multi){const tenant=await platformStore.tenant(tenantId());const ops=require('./shop-operations').state(tenant);if(!tenant?.active)throw new OrderError('Loja indisponível.',404);return {schedule:ops.schedule,payments:ops.payments.filter(m=>m.active),appearance:ops.appearance,companyHours:ops.companyHours,distance:ops.distance,orderingBlocked:require('./finance').access(tenant).blocked&&require('./finance').access(tenant).blockSite,deliveryFee:tenant.profile.deliveryFee??defaults.deliveryFee,deliveryRates:tenant.profile.deliveryRates||[],pickupAddress:tenant.profile.pickupAddress||'',pickupLocations:tenant.profile.pickupLocations,assistantName:tenant.profile.assistantName||(tenant.id===DEFAULT_TENANT?'Florzinha':'Assistente'),deliveryCities:require('./tenant-context').policy(tenant).deliveryCities,name:tenant.name,slug:tenant.slug,city:tenant.profile.city||'',state:tenant.profile.state||'',phone:tenant.profile.phone||''};}
  if(demo)return {...demoSettings};
  const result=await pool.request().query('SELECT deliveryFee FROM dbo.StoreSettings WHERE id=1');
  if(!result.recordset.length)throw new Error('Configuração da loja ausente');
  return {...defaults,deliveryFee:result.recordset[0].deliveryFee};
 }
-app.use(helmet({contentSecurityPolicy:{directives:{imgSrc:["'self'","data:","blob:"],mediaSrc:["'self'","blob:"]}}}));
+app.use(helmet({contentSecurityPolicy:{directives:{imgSrc:["'self'","data:","blob:","https://tile.openstreetmap.org"],mediaSrc:["'self'","blob:"]}}}));
 app.use(express.json({limit:'40kb'}));
 const attendanceChannels=require('./channel-routes').createChannels();
 app.use('/api/channels/oauth',attendanceChannels.callback);
 app.use('/api',rateLimit({windowMs:60000,limit:300}));
 if(multi){app.use('/api/auth',platformAuth.router);app.use('/api/platform',platformAuth.sameOrigin,platformAuth.platform);}
 else app.get('/api/auth/state',(req,res)=>res.json({legacy:true,setupRequired:false}));
-if(multi)app.use(['/api/products','/api/store-settings','/api/orders'],async(req,res,next)=>{try{let tenant;if(req.query.store!==undefined){if(typeof req.query.store!=='string')throw new OrderError('Loja inválida.',400);tenant=await platformStore.bySlug(req.query.store);}else{const account=await platformAuth.readSession(req);tenant=account?.user.role==='master'?await platformStore.tenant(DEFAULT_TENANT):account?.tenant||await platformStore.tenant(DEFAULT_TENANT);}if(!tenant?.active||tenant.id===require('./tenant-context').PLATFORM_TENANT)throw new OrderError('Loja indisponível.',404);context.run(require('./tenant-context').policy(tenant),next);}catch(e){next(e)}});
+if(multi)app.use(['/api/products','/api/store-settings','/api/orders','/api/checkout','/api/site-events'],async(req,res,next)=>{try{let tenant;if(req.query.store!==undefined){if(typeof req.query.store!=='string')throw new OrderError('Loja inválida.',400);tenant=await platformStore.bySlug(req.query.store);}else{const account=await platformAuth.readSession(req);tenant=account?.user.role==='master'?await platformStore.tenant(DEFAULT_TENANT):account?.tenant||await platformStore.tenant(DEFAULT_TENANT);}if(!tenant?.active||tenant.id===require('./tenant-context').PLATFORM_TENANT)throw new OrderError('Loja indisponível.',404);context.run(require('./tenant-context').policy(tenant),next);}catch(e){next(e)}});
 app.use('/api/admin',(req,res,next)=>{res.set('Cache-Control','no-store');next()});
 app.get('/api/health',(req,res)=>res.json({status:'ok',mode:demo?'demo':'sqlserver'}));
 app.get('/api/store-settings',async(req,res,next)=>{try{res.set('Cache-Control','no-store').json(await readSettings())}catch(e){next(e)}});
-async function readCatalog(){if(!multi)return catalog;const tenant=await platformStore.tenant(tenantId());return tenant?.profile.catalog||catalog;}
+async function readCatalog(){if(!multi)return catalog;const tenant=await platformStore.tenant(tenantId());return require('./shop-categories').catalog(tenant);}
 app.get('/api/products',async(req,res,next)=>{try{res.json(await readCatalog())}catch(e){next(e)}});
 async function createOrder(body,source){
  if(source==='site'&&multi){const tenant=await platformStore.tenant(tenantId()),financial=require('./finance').access(tenant);if(financial.blocked&&financial.blockSite)throw new OrderError('Esta floricultura está temporariamente indisponível para novos pedidos.',403);}
@@ -68,17 +68,20 @@ async function createOrder(body,source){
  if(source==='manual'&&candidate.scheduleMode==='now'){candidate.date=orderOptions.localDate();candidate.period=Number(orderOptions.localTime().slice(0,2))<12?'Manhã':'Tarde';candidate.timeSlot='';}
  const parsed=schema.safeParse(candidate);if(!parsed.success)throw new OrderError(parsed.error.issues[0]?.message||'Confira os dados do pedido.',400);
  const data=parsed.data;
+ if(!multi&&!['pix','credit_card'].includes(data.paymentMethod))throw new OrderError('Forma de pagamento indisponível.',400);
  if(source==='manual'&&body.scheduleMode==='scheduled'&&!data.timeSlot)throw new OrderError('Escolha o dia e a faixa de horário do agendamento.',400);
  if(data.timeSlot&&orderOptions.expired(data.date,data.timeSlot))throw new OrderError('Esta faixa de horário já terminou. Escolha outro agendamento.',400);
  const settings=await readSettings();
  let pickupLocation;
  if(data.fulfillment==='pickup'){const points=require('./public/pickup-locations').list(settings);pickupLocation=points.find(p=>p.id===data.pickupLocationId);if(!pickupLocation&&points.length>1)throw new OrderError('Selecione um local de retirada válido.',400);if(!pickupLocation&&data.pickupLocationId)throw new OrderError('O local de retirada mudou. Confira e selecione novamente.',400);pickupLocation||=points[0];if(pickupLocation)pickupLocation={...pickupLocation,formattedAddress:require('./public/pickup-locations').format(pickupLocation)};}
- const quote=require('./public/delivery-rates').quote(settings,data.city,data.neighborhood);if(data.fulfillment==='delivery'&&quote.fee===null)throw new OrderError(quote.error,400);
- const shippingFee=data.fulfillment==='delivery'?quote.fee:0;
+ const quote=require('./public/delivery-rates').quote(settings,data.city,data.neighborhood);if(data.fulfillment==='delivery'&&!settings.distance?.enabled&&quote.fee===null)throw new OrderError(quote.error,400);
+ const road=data.fulfillment==='delivery'?await require('./shop-routing').quoteDistance(settings,data.address,(await require('./shop-integrations').credentials(tenantId(),'routing')).key):null;
+ const shippingFee=data.fulfillment==='delivery'?(road?.fee??quote.fee):0;
  let amount;try{amount=total(data.items,catalog,data.fulfillment,shippingFee)}catch{throw new OrderError('Produto indisponível.',400)}
  const now=new Date().toISOString();
  const items=data.items.map(item=>{const p=catalog.find(p=>p.id===item.id);return {...item,name:p.name,unitPrice:p.price}});
- const order={...data,...(pickupLocation?{pickupLocation,pickupLocationId:pickupLocation.id}:{}),...(savedAddress?{deliveryAddress:Object.fromEntries(Object.entries(savedAddress).filter(([key])=>key!=='history'))}:{}),...(source==='manual'&&body.customerId?{customerId:body.customerId}:{}),customer:data.customer||'Consumidor final',recipient:data.recipient||data.customer||'Consumidor final',customerIdentified:!!(data.customer||data.phone),items,id:randomUUID(),createdAt:now,version:0,source,status:'Aguardando pagamento',paymentStatus:'pending',shippingFee,total:amount,checklist:{arrangement:false,card:false,packaging:false},history:[{at:now,actor:source==='site'?'Cliente pelo site':'Administrador',type:'created',description:'Pedido registrado. Aguardando confirmação de recebimento.'}]};
+ const order={...data,...(pickupLocation?{pickupLocation,pickupLocationId:pickupLocation.id}:{}),...(savedAddress?{deliveryAddress:Object.fromEntries(Object.entries(savedAddress).filter(([key])=>key!=='history'))}:{}),...(source==='manual'&&body.customerId?{customerId:body.customerId}:{}),customer:data.customer||'Consumidor final',recipient:data.recipient||data.customer||'Consumidor final',customerIdentified:!!(data.customer||data.phone),items,id:randomUUID(),createdAt:now,version:0,source,status:'Aguardando pagamento',paymentStatus:'pending',shippingFee,...(road?{distanceQuote:road}:{}),total:amount,checklist:{arrangement:false,card:false,packaging:false},history:[{at:now,actor:source==='site'?'Cliente pelo site':'Administrador',type:'created',description:'Pedido registrado. Aguardando confirmação de recebimento.'}]};
+ if(multi)return platformStore.insertShopOrder(tenantId(),order,{demoOrders:store,couponCode:typeof body.couponCode==='string'?body.couponCode:'',expectedTotal:body.expectedTotal});
  await store.insert(order);return order;
 }
 app.post('/api/orders',async(req,res,next)=>{try{const order=await createOrder(req.body,'site');res.status(201).json({id:order.id,total:order.total,shippingFee:order.shippingFee,paymentStatus:'pending',paymentAvailable:false,mode:demo?'demo':'sqlserver'})}catch(e){next(e)}});
@@ -92,7 +95,8 @@ const whatsappService = require('./whatsapp-service').createWhatsAppService();
 const legacyWhatsAppRouter=require('./whatsapp-routes')(whatsappService);
 app.use('/api/admin/channels',attendanceChannels.router);
 app.use('/api/admin/whatsapp',async(req,res,next)=>{try{const router=multi?(await tenantResources.get(req.account.user.tenantId)).router:legacyWhatsAppRouter;router(req,res,next);}catch(e){next(e)}});
-app.get('/api/admin/performance',async(req,res,next)=>{try{const analytics=require('./analytics'),period=analytics.range(req.query);const [result,clients,products,settings]=await Promise.all([store.analytics(period.from,period.to),customers.analytics(period.from,period.to),readCatalog(),readSettings()]);res.json(analytics.summarize(result.orders,products,clients,period.labels,{truncated:result.truncated,pickupLocations:require('./public/pickup-locations').list(settings)}));}catch(e){next(e)}});
+require('./shop-routes')(app,{platformStore,store,multi,tenantId,readSettings,readCatalog});
+app.get('/api/admin/performance',async(req,res,next)=>{try{const analytics=require('./analytics'),period=analytics.range(req.query);const [result,clients,products,settings]=await Promise.all([store.analytics(period.from,period.to),customers.analytics(period.from,period.to),readCatalog(),readSettings()]);const resultData=analytics.summarize(result.orders,products,clients,period.labels,{truncated:result.truncated,pickupLocations:require('./public/pickup-locations').list(settings)});const tenant=multi?await platformStore.tenant(tenantId()):null;resultData.site=(tenant?.profile.siteStats||[]).filter(r=>r.date>=period.labels.from&&r.date<=period.labels.to);res.json(resultData);}catch(e){next(e)}});
 const localities=require('./locality-service').createLocalityService();
 app.get('/api/admin/locations/cities',(req,res)=>{if(typeof (req.query.q||'')!=='string'||String(req.query.q||'').length>100)return res.status(400).json({error:'Pesquise uma cidade com até 100 caracteres.'});res.json(localities.searchCities(req.query.q||'',String(req.query.state||'').slice(0,2)));});
 app.get('/api/admin/locations/cities/:id/neighborhoods',async(req,res,next)=>{try{res.json(await localities.neighborhoods(req.params.id))}catch(e){next(e)}});

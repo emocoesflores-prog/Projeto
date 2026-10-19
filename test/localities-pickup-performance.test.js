@@ -31,12 +31,12 @@ test('Vários locais de retirada, histórico imutável e análises isoladas por 
   const today=require('../public/order-options').localDate(),url='/api/admin/performance?from='+today+'&to='+today;
   const report=await api(url,undefined,owner);assert.equal(report.status,200);assert.equal(report.data.cards.orders,1);assert.equal(report.data.cards.paid,1);assert.equal(report.data.cards.revenue,created.data.total);assert.equal(report.data.products[0].quantity,2);assert.equal(report.data.pickupUnits[0].label,second.name);
   assert.equal((await api(url,undefined,other)).data.cards.orders,0);assert.equal((await api(url)).status,401);assert.equal((await api('/api/admin/performance?from=2020-01-01&to=2026-01-01',undefined,owner)).status,400);
-  assert.equal(report.data.discountTracking,false);assert.equal(report.data.truncated,false);
+  assert.equal(report.data.discountTracking,true);assert.equal(report.data.truncated,false);
  }finally{await new Promise(r=>server.close(r));}
 });
 
 test('Análises separam receita paga, pendências e cancelamentos sem inventar descontos',()=>{
  const {summarize}=require('../analytics');const common={createdAt:'2026-10-17T15:00:00Z',phone:'11999999999',customer:'Cliente',source:'site',fulfillment:'pickup',items:[{id:1,name:'Rosa',quantity:2,unitPrice:5000}]};
  const report=summarize([{...common,id:'a',status:'Recebido',paymentStatus:'paid',total:10000},{...common,id:'b',status:'Cancelado',paymentStatus:'paid',total:20000,history:[{description:'Pedido cancelado: Duplicado. Pagamento já registrado: verificar estorno fora do sistema.'}]},{...common,id:'c',status:'Aguardando pagamento',paymentStatus:'pending',total:30000}],[{id:1,name:'Rosa',price:5000,category:'Flores'}],{total:1,createdInPeriod:1,emailCount:0,cities:[],genders:[]},{from:'2026-10-17',to:'2026-10-17'});
- assert.equal(report.cards.revenue,10000);assert.equal(report.cards.ticket,10000);assert.equal(report.cards.pending,1);assert.equal(report.cards.cancelled,1);assert.equal(report.products[0].quantity,2);assert.equal(report.daily[0].value,10000);assert.equal(report.paidCancelled,1);assert.equal(report.cancellationReasons[0].label,'Duplicado');assert.equal(report.discountTracking,false);
+ assert.equal(report.cards.revenue,10000);assert.equal(report.cards.ticket,10000);assert.equal(report.cards.pending,1);assert.equal(report.cards.cancelled,1);assert.equal(report.products[0].quantity,2);assert.equal(report.daily[0].value,10000);assert.equal(report.paidCancelled,1);assert.equal(report.cancellationReasons[0].label,'Duplicado');assert.equal(report.discountTracking,true);
 });
