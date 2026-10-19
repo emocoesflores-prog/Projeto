@@ -31,6 +31,8 @@ async function readSettings(){
 }
 app.use(helmet({contentSecurityPolicy:{directives:{imgSrc:["'self'","data:","blob:"],mediaSrc:["'self'","blob:"]}}}));
 app.use(express.json({limit:'40kb'}));
+const attendanceChannels=require('./channel-routes').createChannels();
+app.use('/api/channels/oauth',attendanceChannels.callback);
 app.use('/api',rateLimit({windowMs:60000,limit:300}));
 if(multi){app.use('/api/auth',platformAuth.router);app.use('/api/platform',platformAuth.sameOrigin,platformAuth.platform);}
 else app.get('/api/auth/state',(req,res)=>res.json({legacy:true,setupRequired:false}));
@@ -88,6 +90,7 @@ app.use('/api/admin',(req,res,next)=>{
 });
 const whatsappService = require('./whatsapp-service').createWhatsAppService();
 const legacyWhatsAppRouter=require('./whatsapp-routes')(whatsappService);
+app.use('/api/admin/channels',attendanceChannels.router);
 app.use('/api/admin/whatsapp',async(req,res,next)=>{try{const router=multi?(await tenantResources.get(req.account.user.tenantId)).router:legacyWhatsAppRouter;router(req,res,next);}catch(e){next(e)}});
 app.get('/api/admin/performance',async(req,res,next)=>{try{const analytics=require('./analytics'),period=analytics.range(req.query);const [result,clients,products,settings]=await Promise.all([store.analytics(period.from,period.to),customers.analytics(period.from,period.to),readCatalog(),readSettings()]);res.json(analytics.summarize(result.orders,products,clients,period.labels,{truncated:result.truncated,pickupLocations:require('./public/pickup-locations').list(settings)}));}catch(e){next(e)}});
 const localities=require('./locality-service').createLocalityService();
@@ -131,6 +134,12 @@ app.put('/api/admin/store-settings',async(req,res,next)=>{try{
  if(multi)await platformStore.saveTenant(tenantId(),{profile:parsed.data});else if(demo)demoSettings={...demoSettings,...parsed.data};else await pool.request().input('fee',sql.Int,parsed.data.deliveryFee).query('UPDATE dbo.StoreSettings SET deliveryFee=@fee WHERE id=1');
  res.json(await readSettings());
 }catch(e){next(e)}});
+app.get('/api/admin/contact-orders',async(req,res,next)=>{try{
+ const phone=require('./contact').normalizePhone(typeof req.query.phone==='string'?req.query.phone:'');
+ const offset=Number(req.query.offset||0);if(!phone||!Number.isSafeInteger(offset)||offset<0||offset>100000)throw new OrderError('Telefone ou página inválida.',400);
+ const [result,customer]=await Promise.all([store.byPhone(phone,offset),customers.byPhone(phone)]);res.json({...result,customer:customer?{id:customer.id,name:customer.name,phone:customer.phone}:null,phone});
+}catch(e){next(e)}});
+app.get('/api/admin/orders/:id',async(req,res,next)=>{try{if(!z.uuid().safeParse(req.params.id).success)throw new OrderError('Pedido inválido.',400);const order=await store.get(req.params.id);if(!order)throw new OrderError('Pedido não encontrado.',404);res.json(order);}catch(e){next(e)}});
 app.get('/api/admin/orders',async(req,res,next)=>{try{res.json(await store.list())}catch(e){next(e)}});
 app.post('/api/admin/orders',async(req,res,next)=>{try{res.status(201).json(await createOrder(req.body,'manual'))}catch(e){next(e)}});
 app.patch('/api/admin/orders/:id',async(req,res,next)=>{try{

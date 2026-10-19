@@ -174,6 +174,12 @@ function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeout
       return chats.filter(c => /^\d{5,20}@(c\.us|lid)$/.test(c.id))
         .sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0,200);
     },
+    async contactPhone(id) {
+      const current=requireReady();const normalize=require('./contact').normalizePhone;
+      if(id.endsWith('@c.us'))return normalize(id.split('@')[0]);
+      if(!id.endsWith('@lid'))return null;
+      try{const links=await current.getContactLidAndPhone([id]);const pn=links.find(link=>link.lid===id)?.pn;return pn?.endsWith('@c.us')?normalize(pn.split('@')[0]):null;}catch{return null;}
+    },
     async messages(id) {
       const current = requireReady();
       let chat;

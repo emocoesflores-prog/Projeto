@@ -1,3 +1,5 @@
+> Atendimento, pedidos do cliente e configuração de Instagram, Facebook e e-mail: [guia de integrações](INTEGRACOES-ATENDIMENTO.md).
+
 > Plataforma com lojas separadas, login e assistentes personalizadas: leia [PLATAFORMA.md](PLATAFORMA.md) antes de atualizar uma instalação existente.
 
 # Floricultura Emoções Flores

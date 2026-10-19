@@ -24,6 +24,7 @@ function whatsappRoutes(service, desk = require('./whatsapp-desk-store').createD
     if (!/^\d{5,20}@(c\.us|lid)$/.test(req.params.id)) return res.status(400).json({ error: 'Conversa individual inválida.' });
     next();
   });
+  router.get('/chats/:id/contact',async(req,res,next)=>{try{res.json({phone:service.contactPhone?await service.contactPhone(req.params.id):null});}catch(e){next(e)}});
   router.patch('/chats/:id/desk', async (req,res,next) => {
     const parsed = z.object({ status: z.enum(['new','open','done']).optional(), favorite: z.boolean().optional(), aiEnabled: z.boolean().optional(),
       assignedTo: z.string().trim().max(80).optional(), notes: z.string().max(4000).optional(),

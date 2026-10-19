@@ -33,6 +33,7 @@ function createCustomerStore({ demo, getPool, getTenant=()=>require('./tenant-co
   const scoped=request=>multi?request.input('tenantId',sql.UniqueIdentifier,getTenant()):request;
   function decode(row) { const { payload, phoneKey, ...columns } = row; return { ...JSON.parse(payload), ...columns, phone: phoneKey }; }
   return {
+    async byPhone(phone){const key=normalizePhone(phone);if(!key)return null;if(demo){const c=rows().find(c=>c.phone===key);return c?structuredClone(c):null;}const r=await scoped(getPool().request()).input('phone',sql.VarChar(13),key).query('SELECT * FROM dbo.Customers WHERE phoneKey=@phone'+(multi?' AND tenantId=@tenantId':''));return r.recordset[0]?decode(r.recordset[0]):null;},
     async analytics(from,to){
       const counts=items=>{const map=new Map();for(const item of items){const label=item||'Não informado';map.set(label,(map.get(label)||0)+1);}return [...map].map(([label,value])=>({label,value}));};
       if(demo){const all=rows();return {total:all.length,createdInPeriod:all.filter(c=>c.createdAt>=from.toISOString()&&c.createdAt<to.toISOString()).length,emailCount:all.filter(c=>c.email).length,cities:counts(all.map(c=>c.city)),genders:counts(all.map(c=>c.gender))};}

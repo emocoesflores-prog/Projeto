@@ -160,3 +160,15 @@ ESTADO DA CONEXÃO EM TEMPO REAL
 O atendimento recebe eventos autenticados do servidor para atualizar conexão, QR e logout sem esperar a consulta de conversas. Ao sair pelo celular, a conversa é desabilitada ao receber a notificação do WhatsApp. A limpeza de arquivos antigos não bloqueia a reconexão: a próxima sessão usa um perfil novo. A pasta .wwebjs_auth continua necessária para restaurar a sessão após reiniciar o servidor.
 
 O botão Conectar é liberado depois que o navegador antigo encerra, mantendo uma única sessão ativa. O recebimento da notificação e a confirmação do logout no celular dependem da rede e do WhatsApp; nenhuma atualização local consegue garantir tempo zero no serviço externo.
+
+VERSÃO 2.4.0 — ATENDIMENTO E HISTÓRICO DE PEDIDOS
+
+1. Pare o servidor com Ctrl+C e atualize os arquivos do programa.
+2. Preserve seu .env, .tenants, .wwebjs_auth, .wwebjs_cache e .whatsapp-desk.json. Não copie credenciais de outra instalação.
+3. Execute npm ci e depois npm start. Atualize o navegador com Ctrl+F5.
+4. Não há nova migração SQL para esta versão. As migrações anteriores da plataforma continuam necessárias para instalações antigas.
+5. O menu se chama Atendimento. Selecione uma conversa: Pedidos do cliente fica na lateral direita; o botão de informações mostra/recolhe a lateral. Novo pedido abre o PDV com o cliente identificado. Abrir um pedido não tira você da conversa.
+6. WhatsApp continua funcionando com sua configuração atual. Para ativar Instagram, Facebook e os três tipos de e-mail, siga INTEGRACOES-ATENDIMENTO.md, também disponível em Como configurar as integrações nos botões de conexão.
+7. Não substitua o ADMIN_TOKEN pela chave de criptografia. CHANNELS_ENCRYPTION_KEY é uma chave separada e precisa ser preservada junto ao backup privado.
+8. Os novos canais têm leitura e resposta de texto; dependem de aplicativos e permissões reais dos provedores. As contas reais ainda precisam ser homologadas pela Inova. Não há liberação automática por instalar esta versão.
+9. Os temas claro/escuro valem para todo o painel administrativo e usam azul, branco e cinza.
