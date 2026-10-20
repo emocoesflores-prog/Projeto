@@ -1,3 +1,10 @@
+VERSÃO 3.1 — NAVEGAÇÃO E RELATÓRIO ÚNICO
+Gestão de Pedidos primeiro em Operação; Visão geral dentro de Desempenho.
+Relatório personalizável com filtros, comparação, gráficos, tabelas, CSV e impressão.
+Atalhos de módulos com ícones circulares e busca por função no menu.
+Preserve os dados locais e .env; atualize os arquivos, execute npm ci e npm start.
+Use Ctrl+F5. Não há nova migração SQL. Leia PAINEL-3.1.md.
+
 VERSÃO 3.0 — OPERAÇÃO, CADASTROS E GESTÃO
 Leia MODULOS-DA-LOJA.md para conhecer os fluxos e as integrações necessárias.
 Pare o servidor, preserve .env, .tenants, .wwebjs_auth, .wwebjs_cache e .whatsapp-desk.json,

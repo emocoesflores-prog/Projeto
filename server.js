@@ -96,7 +96,13 @@ const legacyWhatsAppRouter=require('./whatsapp-routes')(whatsappService);
 app.use('/api/admin/channels',attendanceChannels.router);
 app.use('/api/admin/whatsapp',async(req,res,next)=>{try{const router=multi?(await tenantResources.get(req.account.user.tenantId)).router:legacyWhatsAppRouter;router(req,res,next);}catch(e){next(e)}});
 require('./shop-routes')(app,{platformStore,store,multi,tenantId,readSettings,readCatalog});
-app.get('/api/admin/performance',async(req,res,next)=>{try{const analytics=require('./analytics'),period=analytics.range(req.query);const [result,clients,products,settings]=await Promise.all([store.analytics(period.from,period.to),customers.analytics(period.from,period.to),readCatalog(),readSettings()]);const resultData=analytics.summarize(result.orders,products,clients,period.labels,{truncated:result.truncated,pickupLocations:require('./public/pickup-locations').list(settings)});const tenant=multi?await platformStore.tenant(tenantId()):null;resultData.site=(tenant?.profile.siteStats||[]).filter(r=>r.date>=period.labels.from&&r.date<=period.labels.to);res.json(resultData);}catch(e){next(e)}});
+app.get('/api/admin/performance',async(req,res,next)=>{try{
+ const parsed=z.object({from:z.string(),to:z.string(),source:z.enum(['all','site','manual']).default('all'),fulfillment:z.enum(['all','delivery','pickup','store']).default('all')}).strict().safeParse(req.query);if(!parsed.success)throw new OrderError('Confira os filtros do relatório.',400);
+ const {from,to,...filters}=parsed.data,analytics=require('./analytics'),period=analytics.range({from,to});
+ const [result,clients,products,settings]=await Promise.all([store.analytics(period.from,period.to,filters),customers.analytics(period.from,period.to),readCatalog(),readSettings()]);
+ const resultData=analytics.summarize(result.orders,products,clients,period.labels,{truncated:result.truncated,pickupLocations:require('./public/pickup-locations').list(settings)});
+ const tenant=multi?await platformStore.tenant(tenantId()):null;resultData.site=(tenant?.profile.siteStats||[]).filter(r=>r.date>=period.labels.from&&r.date<=period.labels.to);resultData.filters=filters;res.json(resultData);
+}catch(e){next(e)}});
 const localities=require('./locality-service').createLocalityService();
 app.get('/api/admin/locations/cities',(req,res)=>{if(typeof (req.query.q||'')!=='string'||String(req.query.q||'').length>100)return res.status(400).json({error:'Pesquise uma cidade com até 100 caracteres.'});res.json(localities.searchCities(req.query.q||'',String(req.query.state||'').slice(0,2)));});
 app.get('/api/admin/locations/cities/:id/neighborhoods',async(req,res,next)=>{try{res.json(await localities.neighborhoods(req.params.id))}catch(e){next(e)}});

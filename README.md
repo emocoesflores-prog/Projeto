@@ -1,3 +1,5 @@
+> **Versão 3.1:** Gestão de Pedidos primeiro em Operação, módulos em destaque e relatório unificado personalizável: [guia do painel](PAINEL-3.1.md).
+
 > **Versão 3.0:** novos menus e módulos operacionais, categorias múltiplas, caixa e rotas: [guia dos módulos e limitações de integração](MODULOS-DA-LOJA.md).
 
 > Visual creme, rosa e lavanda, novas funções de catálogo e bairros de Mauá: [notas da versão 2.5](VISUAL-E-BAIRROS.md).
