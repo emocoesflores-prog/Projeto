@@ -1,3 +1,5 @@
+> **Versão 3.3:** PDV compacto, lista de pedidos com dados completos, cores por etapa e grupos do menu retráteis: [guia da operação](OPERACAO-3.3.md).
+
 > **Versão 3.2:** central de configurações por módulo, aparência independente do painel/e-commerce e cadastro/verificação DNS de domínio: [guia](CONFIGURACOES-3.2.md).
 
 > **Versão 3.1:** Gestão de Pedidos primeiro em Operação, módulos em destaque e relatório unificado personalizável: [guia do painel](PAINEL-3.1.md).

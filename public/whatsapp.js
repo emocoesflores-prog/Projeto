@@ -55,7 +55,7 @@ const WhatsAppDesk = (() => {
   async function selectChat(chat){
     if(selected)drafts.set(activeChannel+':'+selected.id,el('wa-body').value);
     WhatsAppTools.reset();WhatsAppTools.selected();selected=chat;lastMessages='';el('wa-body').value=drafts.get(activeChannel+':'+chat.id)||'';el('wa-result').textContent='';el('wa-suggestion').hidden=true;suggestionId=null;
-    renderQueue();renderContext();AttendanceOrders.select(chat,()=>request('/chats/'+encodeURIComponent(chat.id)+'/contact'));el('wa-messages').replaceChildren(node('div','Carregando mensagens…','wa-empty'));
+    renderQueue();renderContext();AttendanceOrders.select({...chat,inboxChannel:activeChannel},()=>request('/chats/'+encodeURIComponent(chat.id)+'/contact'));el('wa-messages').replaceChildren(node('div','Carregando mensagens…','wa-empty'));
     try{await messages();}catch(e){if(selected?.id===chat.id)el('wa-result').textContent=e.message;}
   }
   async function download(id,message){

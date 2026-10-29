@@ -1,3 +1,9 @@
+VERSÃO 3.3 — PDV E PEDIDOS COMPACTOS
+Lista única de pedidos, mais informações nas linhas, etiquetas por etapa e grupos do menu retráteis.
+Detalhes do PDV e dos pedidos organizados para aproveitar melhor a tela.
+Preserve .env e pastas privadas; atualize os arquivos, execute npm ci e npm start; use Ctrl+F5.
+Não há nova variável obrigatória ou migração SQL. Leia OPERACAO-3.3.md.
+
 VERSÃO 3.2 — CENTRAL DE CONFIGURAÇÕES
 Ajustes organizados por módulo, painel e e-commerce com aparência independente.
 Domínio próprio: cadastro e comprovação por TXT; hospedagem/HTTPS e roteamento não são automáticos.
