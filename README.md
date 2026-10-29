@@ -1,3 +1,5 @@
+> **Versão 3.4:** produtos em lista, cadastro por abas, estoque auditado, mídias, promoções, SEO e complementos: [guia de produtos e atualização](PRODUTOS-3.4.md).
+
 > **Versão 3.3:** PDV compacto, lista de pedidos com dados completos, cores por etapa e grupos do menu retráteis: [guia da operação](OPERACAO-3.3.md).
 
 > **Versão 3.2:** central de configurações por módulo, aparência independente do painel/e-commerce e cadastro/verificação DNS de domínio: [guia](CONFIGURACOES-3.2.md).

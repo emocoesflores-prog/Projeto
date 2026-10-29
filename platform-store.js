@@ -5,7 +5,7 @@ const {defaults}=require('./store-settings');
 const baseCatalog=require('./catalog');
 const initialProfile=()=>({...defaults,assistantName:'Assistente',catalog:structuredClone(baseCatalog),phone:'',email:'',document:'',address:'',city:'',state:''});
 function createPlatformStore({demo,getPool}){
- const tenants=new Map([[DEFAULT_TENANT,{id:DEFAULT_TENANT,name:'Floricultura Emoções Flores',slug:'emocoes-flores',active:true,profile:{...initialProfile(),assistantName:'Florzinha',deliveryCities:['Mauá','Santo André','Ribeirão Pires']}}]]),users=new Map(),sessions=new Map();
+ const tenants=new Map([[DEFAULT_TENANT,{id:DEFAULT_TENANT,name:'Floricultura Emoções Flores',slug:'emocoes-flores',active:true,profile:{...initialProfile(),assistantName:'Florzinha',deliveryCities:['Mauá','Santo André','Ribeirão Pires']}}]]),users=new Map(),sessions=new Map(),productEvents=new Map();
  tenants.set(PLATFORM_TENANT,{id:PLATFORM_TENANT,name:PLATFORM_NAME,slug:'inova-facil-management',active:true,profile:{phone:PLATFORM_PHONE,document:PLATFORM_LOGIN,assistantName:'Assistente',deliveryCities:[]}});
  const safeTenant=row=>row?{...row,active:!!row.active,profile:typeof row.profile==='string'?JSON.parse(row.profile):structuredClone(row.profile)}:null;
  const request=()=>getPool().request();
@@ -56,9 +56,9 @@ function createPlatformStore({demo,getPool}){
    if(demo){const t=tenants.get(id);if(t)update(t);return;}
    const tx=new sql.Transaction(getPool());await tx.begin(sql.ISOLATION_LEVEL.SERIALIZABLE);try{const row=(await new sql.Request(tx).input('id',sql.UniqueIdentifier,id).query('SELECT * FROM dbo.Tenants WITH(UPDLOCK,HOLDLOCK) WHERE id=@id')).recordset[0];if(row){const t=safeTenant(row);update(t);await new sql.Request(tx).input('id',sql.UniqueIdentifier,id).input('profile',sql.NVarChar(sql.MAX),JSON.stringify(t.profile)).query('UPDATE dbo.Tenants SET profile=@profile WHERE id=@id');}await tx.commit();}catch(e){try{await tx.rollback()}catch{}throw e;}
   },
-  async changeOperations(id,input,{demoOrders,plan=null,routingConfigured=false,domainProof=null}={}){
+  async changeOperations(id,input,{demoOrders,plan=null,routingConfigured=false,domainProof=null,actor}={}){
    const domain=require('./shop-operations');
-   if(demo){const original=tenants.get(id);if(!original)return null;if(domainProof&&[...tenants.values()].some(t=>t.id!==id&&t.profile.operations?.configuration?.domain?.hostname===domainProof.hostname&&t.profile.operations.configuration.domain.verifiedAt))throw Object.assign(Error('Este domínio já foi verificado por outra floricultura.'),{status:409});const result=domain.applyOperations(safeTenant(original),input,{orders:demoOrders.snapshot(),plan,routingConfigured,domainProof});demoOrders.commitBatch(result.orders);tenants.set(id,result.tenant);return result;}
+   if(demo){const original=tenants.get(id);if(!original)return null;if(domainProof&&[...tenants.values()].some(t=>t.id!==id&&t.profile.operations?.configuration?.domain?.hostname===domainProof.hostname&&t.profile.operations.configuration.domain.verifiedAt))throw Object.assign(Error('Este domínio já foi verificado por outra floricultura.'),{status:409});const result=domain.applyOperations(safeTenant(original),input,{orders:demoOrders.snapshot(),plan,routingConfigured,domainProof,actor});demoOrders.commitBatch(result.orders);tenants.set(id,result.tenant);productEvents.set(id,[...(productEvents.get(id)||[]),...result.productEvents]);return result;}
    const tx=new sql.Transaction(getPool());await tx.begin(sql.ISOLATION_LEVEL.SERIALIZABLE);
    try{
     if(domainProof){const lock=await new sql.Request(tx).query("DECLARE @code int; EXEC @code=sys.sp_getapplock @Resource='inova-domain-registry',@LockMode='Exclusive',@LockOwner='Transaction',@LockTimeout=5000; SELECT @code AS code");if(lock.recordset[0].code<0)throw Object.assign(Error('Outra verificação está em andamento. Tente novamente.'),{status:409});const claimed=await new sql.Request(tx).input('id',sql.UniqueIdentifier,id).input('host',sql.VarChar(253),domainProof.hostname).query("SELECT TOP(1) id FROM dbo.Tenants WHERE id<>@id AND JSON_VALUE(profile,'$.operations.configuration.domain.hostname')=@host AND JSON_VALUE(profile,'$.operations.configuration.domain.verifiedAt') IS NOT NULL");if(claimed.recordset.length)throw Object.assign(Error('Este domínio já foi verificado por outra floricultura.'),{status:409});}
@@ -70,31 +70,39 @@ function createPlatformStore({demo,getPool}){
      const r=await new sql.Request(tx).input('tenant',sql.UniqueIdentifier,id).input('order',sql.UniqueIdentifier,orderId).query('SELECT * FROM dbo.Orders WITH(UPDLOCK,HOLDLOCK) WHERE tenantId=@tenant AND id=@order');
      if(r.recordset.length)orders.push(require('./order-store').decode(r.recordset[0]));
     }
-    const result=domain.applyOperations(original,input,{orders,plan,routingConfigured,domainProof});
+    const result=domain.applyOperations(original,input,{orders,plan,routingConfigured,domainProof,actor});
     for(const o of result.orders)await new sql.Request(tx).input('tenant',sql.UniqueIdentifier,id).input('id',sql.UniqueIdentifier,o.id).input('status',sql.NVarChar(40),o.status).input('payload',sql.NVarChar(sql.MAX),JSON.stringify(o)).query('UPDATE dbo.Orders SET status=@status,payload=@payload WHERE tenantId=@tenant AND id=@id');
     await new sql.Request(tx).input('id',sql.UniqueIdentifier,id).input('name',sql.NVarChar(120),result.tenant.name).input('profile',sql.NVarChar(sql.MAX),JSON.stringify(result.tenant.profile)).query('UPDATE dbo.Tenants SET name=@name,profile=@profile WHERE id=@id');
+    await require('./product-events').append(tx,id,result.productEvents);
     await tx.commit();return result;
    }catch(e){try{await tx.rollback()}catch{}throw e;}
   },
-  async insertShopOrder(id,order,{demoOrders,couponCode='',expectedTotal}){
+  async productHistory(id,{productId,offset=0,kind='',from='',to=''}){
+   const start=from?new Date(from+'T00:00:00-03:00'):null,end=to?new Date(new Date(to+'T00:00:00-03:00').getTime()+86400000):null;let events;if(demo)events=(productEvents.get(id)||[]).filter(e=>(!productId||e.productId===productId)&&(!kind||e.kind.startsWith(kind))&&(!start||e.at>=start.toISOString())&&(!end||e.at<end.toISOString())).sort((a,b)=>b.at.localeCompare(a.at)||b.id.localeCompare(a.id)).slice(offset,offset+51);
+   else {const r=await request().input('tenant',sql.UniqueIdentifier,id).input('product',sql.Int,productId||null).input('offset',sql.Int,offset).input('kind',sql.VarChar(30),kind+'%').input('from',sql.DateTime2,start).input('to',sql.DateTime2,end).query("SELECT payload FROM dbo.ProductEvents WHERE tenantId=@tenant AND (@product IS NULL OR productId=@product) AND kind LIKE @kind AND (@from IS NULL OR createdAt>=@from) AND (@to IS NULL OR createdAt<@to) ORDER BY createdAt DESC,id DESC OFFSET @offset ROWS FETCH NEXT 51 ROWS ONLY");events=r.recordset.map(r=>JSON.parse(r.payload));}
+   return {events:events.slice(0,50),nextOffset:events.length>50?offset+50:null};
+  },
+  async insertShopOrder(id,order,{demoOrders,couponCode='',expectedTotal,actor}){
    const prepare=tenant=>{
+    const events=require('./product-domain').sell(tenant,order,{actor:order.source==='site'?'Cliente pelo site':actor||'Venda pelo painel'});
     const s=require('./shop-operations').state(tenant),rules=require('./public/shop-rules');
     const issue=rules.issue(s.schedule,order);if(issue)throw Object.assign(Error(issue),{status:400});
     const method=s.payments.find(m=>m.active&&m.id===order.paymentMethod);if(!method)throw Object.assign(Error('Esta forma de pagamento não está disponível.'),{status:400});
-    const list=tenant.profile.catalog||baseCatalog;for(const item of order.items){const p=list.find(p=>p.id===item.id&&p.active!==false);if(!p||p.price!==item.unitPrice)throw Object.assign(Error('O produto ou preço mudou. Atualize o pedido.'),{status:409});}
+
     let discount;try{discount=rules.discount(s.coupons,couponCode,order.total-order.shippingFee);}catch(e){throw Object.assign(e,{status:400});}
-    const next={...order,total:order.total-discount.amount,discount:discount.coupon,paymentMethodName:method.name};
+    const next={...order,items:order.items.map(item=>{const p=require('./product-domain').normalize(tenant.profile.catalog.find(p=>p.id===item.id));return {...item,includes:p.includes,internalInstructions:p.internalInstructions,cost:p.cost,fiscal:p.fiscal};}),total:order.total-discount.amount,discount:discount.coupon,paymentMethodName:method.name};
     if(expectedTotal!==undefined&&expectedTotal!==next.total)throw Object.assign(Error('O total mudou. Confira o orçamento atualizado.'),{status:409});
     if(discount.coupon){s.coupons.find(c=>c.id===discount.coupon.id).used++;s.revision++;tenant.profile.operations=s;}
-    return next;
+    if(events.length){s.revision++;tenant.profile.operations=s;}return {next,events};
    };
-   if(demo){const tenant=safeTenant(tenants.get(id)),next=prepare(tenant);demoOrders.insertSync(next);tenants.set(id,tenant);return next;}
+   if(demo){const tenant=safeTenant(tenants.get(id)),{next,events}=prepare(tenant);demoOrders.insertSync(next);tenants.set(id,tenant);productEvents.set(id,[...(productEvents.get(id)||[]),...events]);return next;}
    const tx=new sql.Transaction(getPool());await tx.begin(sql.ISOLATION_LEVEL.SERIALIZABLE);
    try{
     const row=(await new sql.Request(tx).input('id',sql.UniqueIdentifier,id).query('SELECT * FROM dbo.Tenants WITH(UPDLOCK,HOLDLOCK) WHERE id=@id')).recordset[0];if(!row)throw Error('Loja indisponível.');
-    const tenant=safeTenant(row),next=prepare(tenant);
+    const tenant=safeTenant(row),{next,events}=prepare(tenant);
     await new sql.Request(tx).input('tenant',sql.UniqueIdentifier,id).input('id',sql.UniqueIdentifier,next.id).input('total',sql.Int,next.total).input('status',sql.NVarChar(40),next.status).input('payload',sql.NVarChar(sql.MAX),JSON.stringify(next)).query('INSERT INTO dbo.Orders(tenantId,id,total,status,payload) VALUES(@tenant,@id,@total,@status,@payload)');
-    if(next.discount)await new sql.Request(tx).input('id',sql.UniqueIdentifier,id).input('profile',sql.NVarChar(sql.MAX),JSON.stringify(tenant.profile)).query('UPDATE dbo.Tenants SET profile=@profile WHERE id=@id');
+    if(next.discount||events.length)await new sql.Request(tx).input('id',sql.UniqueIdentifier,id).input('profile',sql.NVarChar(sql.MAX),JSON.stringify(tenant.profile)).query('UPDATE dbo.Tenants SET profile=@profile WHERE id=@id');
+    await require('./product-events').append(tx,id,events);
     await tx.commit();return next;
    }catch(e){try{await tx.rollback()}catch{}throw e;}
   },

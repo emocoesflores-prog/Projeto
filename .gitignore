@@ -9,3 +9,5 @@ node_modules/
 .whatsapp-desk.json.tmp
 
 .tenants/
+
+.product-media/

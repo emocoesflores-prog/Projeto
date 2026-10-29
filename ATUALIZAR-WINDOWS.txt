@@ -1,3 +1,12 @@
+VERSÃO 3.4 — CADASTRO DE PRODUTOS
+Produtos em lista, editor por abas, estoque auditado, fotos/vídeo, promoções, SEO e complementos.
+Preserve .env, banco e pastas privadas; atualize os arquivos, execute npm ci e npm start; use Ctrl+F5.
+Nova tabela de histórico: dbo.ProductEvents, criada na inicialização com sql/product-events.sql.
+Se houver falta de permissão, execute esse script no SSMS com uma conta autorizada e reinicie.
+Não há nova variável obrigatória no .env. Preserve e inclua .product-media nos backups.
+Parâmetros fiscais não ativam emissão de NF-e/NFC-e nem certificam conformidade fiscal.
+Leia PRODUTOS-3.4.md.
+
 VERSÃO 3.3 — PDV E PEDIDOS COMPACTOS
 Lista única de pedidos, mais informações nas linhas, etiquetas por etapa e grupos do menu retráteis.
 Detalhes do PDV e dos pedidos organizados para aproveitar melhor a tela.

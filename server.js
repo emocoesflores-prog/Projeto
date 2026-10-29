@@ -29,7 +29,7 @@ async function readSettings(){
  if(!result.recordset.length)throw new Error('Configuração da loja ausente');
  return {...defaults,deliveryFee:result.recordset[0].deliveryFee};
 }
-app.use(helmet({contentSecurityPolicy:{directives:{imgSrc:["'self'","data:","blob:","https://tile.openstreetmap.org","https:"],mediaSrc:["'self'","blob:"]}}}));
+app.use(helmet({contentSecurityPolicy:{directives:{imgSrc:["'self'","data:","blob:","https://tile.openstreetmap.org","https:"],mediaSrc:["'self'","blob:","https:"]}}}));
 app.use(express.json({limit:'40kb'}));
 const attendanceChannels=require('./channel-routes').createChannels();
 app.use('/api/channels/oauth',attendanceChannels.callback);
@@ -40,11 +40,11 @@ if(multi)app.use(['/api/products','/api/store-settings','/api/orders','/api/chec
 app.use('/api/admin',(req,res,next)=>{res.set('Cache-Control','no-store');next()});
 app.get('/api/health',(req,res)=>res.json({status:'ok',mode:demo?'demo':'sqlserver'}));
 app.get('/api/store-settings',async(req,res,next)=>{try{res.set('Cache-Control','no-store').json(await readSettings())}catch(e){next(e)}});
-async function readCatalog(){if(!multi)return catalog;const tenant=await platformStore.tenant(tenantId());return require('./shop-categories').catalog(tenant);}
-app.get('/api/products',async(req,res,next)=>{try{res.json(await readCatalog())}catch(e){next(e)}});
-async function createOrder(body,source){
+async function readCatalog(options={}){if(!multi)return options.privateData===false?catalog.map(p=>require('./product-domain').publicProduct(p)):catalog;const tenant=await platformStore.tenant(tenantId());return require('./shop-categories').catalog(tenant,options);}
+app.get('/api/products',async(req,res,next)=>{try{res.set('Cache-Control','no-store').json(await readCatalog({audience:'site',privateData:false}))}catch(e){next(e)}});
+async function createOrder(body,source,actor){
  if(source==='site'&&multi){const tenant=await platformStore.tenant(tenantId()),financial=require('./finance').access(tenant);if(financial.blocked&&financial.blockSite)throw new OrderError('Esta floricultura está temporariamente indisponível para novos pedidos.',403);}
- const catalog=await readCatalog();
+ const catalog=await readCatalog({audience:source==='site'?'site':'system'});
  if(!body||typeof body!=='object'||Array.isArray(body))throw new OrderError('Informe os dados do pedido.',400);
  if(source==='site'&&(body.fulfillment==='store'||body.scheduleMode==='now'))throw new OrderError('A loja online aceita apenas entrega ou retirada agendada.',400);
  const candidate={...body};
@@ -80,9 +80,9 @@ async function createOrder(body,source){
  let amount;try{amount=total(data.items,catalog,data.fulfillment,shippingFee)}catch{throw new OrderError('Produto indisponível.',400)}
  const salesChannel=source==='site'?'site':(body.salesChannel||'manual');if(!z.enum(['site','manual','pdv','whatsapp','instagram','facebook','gmail','outlook','imap']).safeParse(salesChannel).success)throw new OrderError('Canal de origem inválido.',400);
  const now=new Date().toISOString();
- const items=data.items.map(item=>{const p=catalog.find(p=>p.id===item.id);return {...item,name:p.name,unitPrice:p.price}});
+ const items=data.items.map(item=>{const p=catalog.find(p=>p.id===item.id);return {...item,name:p.name,unitPrice:p.price,includes:p.includes||'',internalInstructions:p.internalInstructions||'',cost:p.cost||0,fiscal:p.fiscal}});
  const order={...data,...(pickupLocation?{pickupLocation,pickupLocationId:pickupLocation.id}:{}),...(savedAddress?{deliveryAddress:Object.fromEntries(Object.entries(savedAddress).filter(([key])=>key!=='history'))}:{}),...(source==='manual'&&body.customerId?{customerId:body.customerId}:{}),customer:data.customer||'Consumidor final',recipient:data.recipient||data.customer||'Consumidor final',customerIdentified:!!(data.customer||data.phone),items,id:randomUUID(),createdAt:now,version:0,source,salesChannel,status:'Aguardando pagamento',paymentStatus:'pending',shippingFee,...(road?{distanceQuote:road}:{}),total:amount,checklist:{arrangement:false,card:false,packaging:false},history:[{at:now,actor:source==='site'?'Cliente pelo site':'Administrador',type:'created',description:'Pedido registrado. Aguardando confirmação de recebimento.'}]};
- if(multi)return platformStore.insertShopOrder(tenantId(),order,{demoOrders:store,couponCode:typeof body.couponCode==='string'?body.couponCode:'',expectedTotal:body.expectedTotal});
+ if(multi)return platformStore.insertShopOrder(tenantId(),order,{demoOrders:store,couponCode:typeof body.couponCode==='string'?body.couponCode:'',expectedTotal:body.expectedTotal,actor});
  await store.insert(order);return order;
 }
 app.post('/api/orders',async(req,res,next)=>{try{const order=await createOrder(req.body,'site');res.status(201).json({id:order.id,total:order.total,shippingFee:order.shippingFee,paymentStatus:'pending',paymentAvailable:false,mode:demo?'demo':'sqlserver'})}catch(e){next(e)}});
@@ -96,6 +96,8 @@ const whatsappService = require('./whatsapp-service').createWhatsAppService();
 const legacyWhatsAppRouter=require('./whatsapp-routes')(whatsappService);
 app.use('/api/admin/channels',attendanceChannels.router);
 app.use('/api/admin/whatsapp',async(req,res,next)=>{try{const router=multi?(await tenantResources.get(req.account.user.tenantId)).router:legacyWhatsAppRouter;router(req,res,next);}catch(e){next(e)}});
+app.get('/api/admin/products',async(req,res,next)=>{try{res.set('Cache-Control','no-store').json(await readCatalog({audience:'system',privateData:false}));}catch(e){next(e)}});
+require('./product-routes')(app,{platformStore,multi,tenantId});
 require('./shop-routes')(app,{platformStore,store,multi,tenantId,readSettings,readCatalog});
 app.get('/api/admin/performance',async(req,res,next)=>{try{
  const parsed=z.object({from:z.string(),to:z.string(),source:z.enum(['all','site','manual']).default('all'),fulfillment:z.enum(['all','delivery','pickup','store']).default('all')}).strict().safeParse(req.query);if(!parsed.success)throw new OrderError('Confira os filtros do relatório.',400);
@@ -152,7 +154,7 @@ app.get('/api/admin/contact-orders',async(req,res,next)=>{try{
 }catch(e){next(e)}});
 app.get('/api/admin/orders/:id',async(req,res,next)=>{try{if(!z.uuid().safeParse(req.params.id).success)throw new OrderError('Pedido inválido.',400);const order=await store.get(req.params.id);if(!order)throw new OrderError('Pedido não encontrado.',404);res.json(order);}catch(e){next(e)}});
 app.get('/api/admin/orders',async(req,res,next)=>{try{res.json(await store.list())}catch(e){next(e)}});
-app.post('/api/admin/orders',async(req,res,next)=>{try{res.status(201).json(await createOrder(req.body,'manual'))}catch(e){next(e)}});
+app.post('/api/admin/orders',async(req,res,next)=>{try{res.status(201).json(await createOrder(req.body,'manual',req.account?.user.name||'Administrador'))}catch(e){next(e)}});
 app.patch('/api/admin/orders/:id',async(req,res,next)=>{try{
  if(!z.uuid().safeParse(req.params.id).success)throw new OrderError('Código de pedido inválido.',400);
  res.json(await store.mutate(req.params.id,req.body));
@@ -160,6 +162,7 @@ app.patch('/api/admin/orders/:id',async(req,res,next)=>{try{
 app.get('/painel/:slug',async(req,res,next)=>{try{if(!multi)return res.sendStatus(404);const tenant=await platformStore.bySlug(req.params.slug);if(!tenant?.active||tenant.id===require('./tenant-context').PLATFORM_TENANT)return res.status(404).send('Painel indisponível.');res.sendFile(require('node:path').join(__dirname,'public/admin.html'));}catch(e){next(e)}});
 app.get('/loja/:slug',async(req,res,next)=>{try{if(!multi)return res.sendStatus(404);const tenant=await platformStore.bySlug(req.params.slug);if(!tenant?.active||tenant.id===require('./tenant-context').PLATFORM_TENANT)return res.status(404).send('Loja indisponível.');res.sendFile(require('node:path').join(__dirname,'public/index.html'));}catch(e){next(e)}});
 app.get('/inova',(req,res)=>res.redirect('/inova.html'));
+require('./product-routes').publicRoutes(app,{platformStore,multi});
 app.use(express.static('public'));
 app.use((err,req,res,next)=>{
  if(Number.isInteger(err.status)&&err.status>=400&&err.status<500)return res.status(err.status).json({error:err.message});
@@ -177,6 +180,7 @@ async function start(){
   if(!check.recordset[0].customerTable)throw new Error('Cadastro de clientes ainda não instalado. No SSMS, selecione Floricultura e execute sql/customers.sql com uma conta autorizada. Depois inicie novamente.');
  }
  if(multi&&!demo){const check=await pool.request().query("SELECT OBJECT_ID(N'dbo.AppSessions',N'U') AS sessionsTable,COL_LENGTH(N'dbo.Orders',N'tenantId') AS orderTenant,COL_LENGTH(N'dbo.Customers',N'tenantId') AS customerTenant");if(!check.recordset[0].sessionsTable||!check.recordset[0].orderTenant||!check.recordset[0].customerTenant)throw Error('Execute npm run migrate:platform no banco atual com uma conta autorizada antes de iniciar a plataforma.');const company=await pool.request().query("SELECT id FROM dbo.Tenants WHERE id='00000000-0000-4000-8000-000000000002'");if(!company.recordset.length)throw Error('Atualize o esquema da empresa gestora com npm run migrate:platform.');}
+ if(multi&&!demo){try{await pool.request().query(require('node:fs').readFileSync(require('node:path').join(__dirname,'sql/product-events.sql'),'utf8'));}catch(e){if([229,262].includes(e.number))throw Error('Histórico de produtos ainda não instalado. No SSMS, execute sql/product-events.sql no banco da plataforma com uma conta autorizada. Depois inicie novamente.');throw e;}}
  const httpServer=app.listen(process.env.PORT||3000,()=>console.log(`Floricultura iniciada (${demo?'DEMONSTRAÇÃO SEM PERSISTÊNCIA':'SQL Server'})`));
  let shuttingDown=false;
  const shutdown=async()=>{if(shuttingDown)return;shuttingDown=true;const deadline=setTimeout(()=>process.exit(1),15000);httpServer.close();try{await tenantResources.close();await whatsappService.close();await sql.close();clearTimeout(deadline);process.exit(0);}catch{console.error('Não foi possível encerrar o navegador da sessão.');clearTimeout(deadline);process.exit(1);}};
