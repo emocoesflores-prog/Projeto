@@ -56,11 +56,12 @@ function createPlatformStore({demo,getPool}){
    if(demo){const t=tenants.get(id);if(t)update(t);return;}
    const tx=new sql.Transaction(getPool());await tx.begin(sql.ISOLATION_LEVEL.SERIALIZABLE);try{const row=(await new sql.Request(tx).input('id',sql.UniqueIdentifier,id).query('SELECT * FROM dbo.Tenants WITH(UPDLOCK,HOLDLOCK) WHERE id=@id')).recordset[0];if(row){const t=safeTenant(row);update(t);await new sql.Request(tx).input('id',sql.UniqueIdentifier,id).input('profile',sql.NVarChar(sql.MAX),JSON.stringify(t.profile)).query('UPDATE dbo.Tenants SET profile=@profile WHERE id=@id');}await tx.commit();}catch(e){try{await tx.rollback()}catch{}throw e;}
   },
-  async changeOperations(id,input,{demoOrders,plan=null,routingConfigured=false}={}){
+  async changeOperations(id,input,{demoOrders,plan=null,routingConfigured=false,domainProof=null}={}){
    const domain=require('./shop-operations');
-   if(demo){const original=tenants.get(id);if(!original)return null;const result=domain.applyOperations(safeTenant(original),input,{orders:demoOrders.snapshot(),plan,routingConfigured});demoOrders.commitBatch(result.orders);tenants.set(id,result.tenant);return result;}
+   if(demo){const original=tenants.get(id);if(!original)return null;if(domainProof&&[...tenants.values()].some(t=>t.id!==id&&t.profile.operations?.configuration?.domain?.hostname===domainProof.hostname&&t.profile.operations.configuration.domain.verifiedAt))throw Object.assign(Error('Este domínio já foi verificado por outra floricultura.'),{status:409});const result=domain.applyOperations(safeTenant(original),input,{orders:demoOrders.snapshot(),plan,routingConfigured,domainProof});demoOrders.commitBatch(result.orders);tenants.set(id,result.tenant);return result;}
    const tx=new sql.Transaction(getPool());await tx.begin(sql.ISOLATION_LEVEL.SERIALIZABLE);
    try{
+    if(domainProof){const lock=await new sql.Request(tx).query("DECLARE @code int; EXEC @code=sys.sp_getapplock @Resource='inova-domain-registry',@LockMode='Exclusive',@LockOwner='Transaction',@LockTimeout=5000; SELECT @code AS code");if(lock.recordset[0].code<0)throw Object.assign(Error('Outra verificação está em andamento. Tente novamente.'),{status:409});const claimed=await new sql.Request(tx).input('id',sql.UniqueIdentifier,id).input('host',sql.VarChar(253),domainProof.hostname).query("SELECT TOP(1) id FROM dbo.Tenants WHERE id<>@id AND JSON_VALUE(profile,'$.operations.configuration.domain.hostname')=@host AND JSON_VALUE(profile,'$.operations.configuration.domain.verifiedAt') IS NOT NULL");if(claimed.recordset.length)throw Object.assign(Error('Este domínio já foi verificado por outra floricultura.'),{status:409});}
     const row=(await new sql.Request(tx).input('id',sql.UniqueIdentifier,id).query('SELECT * FROM dbo.Tenants WITH(UPDLOCK,HOLDLOCK) WHERE id=@id')).recordset[0];
     if(!row)throw Object.assign(Error('Floricultura não encontrada.'),{status:404});
     const original=safeTenant(row),orders=[];
@@ -69,7 +70,7 @@ function createPlatformStore({demo,getPool}){
      const r=await new sql.Request(tx).input('tenant',sql.UniqueIdentifier,id).input('order',sql.UniqueIdentifier,orderId).query('SELECT * FROM dbo.Orders WITH(UPDLOCK,HOLDLOCK) WHERE tenantId=@tenant AND id=@order');
      if(r.recordset.length)orders.push(require('./order-store').decode(r.recordset[0]));
     }
-    const result=domain.applyOperations(original,input,{orders,plan,routingConfigured});
+    const result=domain.applyOperations(original,input,{orders,plan,routingConfigured,domainProof});
     for(const o of result.orders)await new sql.Request(tx).input('tenant',sql.UniqueIdentifier,id).input('id',sql.UniqueIdentifier,o.id).input('status',sql.NVarChar(40),o.status).input('payload',sql.NVarChar(sql.MAX),JSON.stringify(o)).query('UPDATE dbo.Orders SET status=@status,payload=@payload WHERE tenantId=@tenant AND id=@id');
     await new sql.Request(tx).input('id',sql.UniqueIdentifier,id).input('name',sql.NVarChar(120),result.tenant.name).input('profile',sql.NVarChar(sql.MAX),JSON.stringify(result.tenant.profile)).query('UPDATE dbo.Tenants SET name=@name,profile=@profile WHERE id=@id');
     await tx.commit();return result;

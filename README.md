@@ -1,3 +1,5 @@
+> **Versão 3.2:** central de configurações por módulo, aparência independente do painel/e-commerce e cadastro/verificação DNS de domínio: [guia](CONFIGURACOES-3.2.md).
+
 > **Versão 3.1:** Gestão de Pedidos primeiro em Operação, módulos em destaque e relatório unificado personalizável: [guia do painel](PAINEL-3.1.md).
 
 > **Versão 3.0:** novos menus e módulos operacionais, categorias múltiplas, caixa e rotas: [guia dos módulos e limitações de integração](MODULOS-DA-LOJA.md).

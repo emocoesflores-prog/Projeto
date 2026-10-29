@@ -1,3 +1,10 @@
+VERSÃO 3.2 — CENTRAL DE CONFIGURAÇÕES
+Ajustes organizados por módulo, painel e e-commerce com aparência independente.
+Domínio próprio: cadastro e comprovação por TXT; hospedagem/HTTPS e roteamento não são automáticos.
+Leia CONFIGURACOES-3.2.md. Preserve seu .env e as pastas privadas de sessões.
+Pare o servidor, atualize os arquivos, execute npm ci e npm start; use Ctrl+F5.
+Não há nova migração SQL nem nova variável obrigatória de ambiente.
+
 VERSÃO 3.1 — NAVEGAÇÃO E RELATÓRIO ÚNICO
 Gestão de Pedidos primeiro em Operação; Visão geral dentro de Desempenho.
 Relatório personalizável com filtros, comparação, gráficos, tabelas, CSV e impressão.

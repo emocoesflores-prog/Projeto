@@ -23,13 +23,13 @@ let pool,demoSettings={...defaults};
 const store=createOrderStore({demo,getPool:()=>pool,getTenant:tenantId,multi});
 const customers=createCustomerStore({demo,getPool:()=>pool,getTenant:tenantId,multi});
 async function readSettings(){
- if(multi){const tenant=await platformStore.tenant(tenantId());const ops=require('./shop-operations').state(tenant);if(!tenant?.active)throw new OrderError('Loja indisponível.',404);return {schedule:ops.schedule,payments:ops.payments.filter(m=>m.active),appearance:ops.appearance,companyHours:ops.companyHours,distance:ops.distance,orderingBlocked:require('./finance').access(tenant).blocked&&require('./finance').access(tenant).blockSite,deliveryFee:tenant.profile.deliveryFee??defaults.deliveryFee,deliveryRates:tenant.profile.deliveryRates||[],pickupAddress:tenant.profile.pickupAddress||'',pickupLocations:tenant.profile.pickupLocations,assistantName:tenant.profile.assistantName||(tenant.id===DEFAULT_TENANT?'Florzinha':'Assistente'),deliveryCities:require('./tenant-context').policy(tenant).deliveryCities,name:tenant.name,slug:tenant.slug,city:tenant.profile.city||'',state:tenant.profile.state||'',phone:tenant.profile.phone||''};}
+ if(multi){const tenant=await platformStore.tenant(tenantId());const ops=require('./shop-operations').state(tenant);if(!tenant?.active)throw new OrderError('Loja indisponível.',404);const configuration=require('./tenant-configuration').state(tenant);return {storefront:configuration.storefront,pdv:configuration.pdv,schedule:ops.schedule,payments:ops.payments.filter(m=>m.active),appearance:ops.appearance,companyHours:ops.companyHours,distance:ops.distance,orderingBlocked:require('./finance').access(tenant).blocked&&require('./finance').access(tenant).blockSite,deliveryFee:tenant.profile.deliveryFee??defaults.deliveryFee,deliveryRates:tenant.profile.deliveryRates||[],pickupAddress:tenant.profile.pickupAddress||'',pickupLocations:tenant.profile.pickupLocations,assistantName:tenant.profile.assistantName||(tenant.id===DEFAULT_TENANT?'Florzinha':'Assistente'),deliveryCities:require('./tenant-context').policy(tenant).deliveryCities,name:tenant.name,slug:tenant.slug,city:tenant.profile.city||'',state:tenant.profile.state||'',phone:tenant.profile.phone||''};}
  if(demo)return {...demoSettings};
  const result=await pool.request().query('SELECT deliveryFee FROM dbo.StoreSettings WHERE id=1');
  if(!result.recordset.length)throw new Error('Configuração da loja ausente');
  return {...defaults,deliveryFee:result.recordset[0].deliveryFee};
 }
-app.use(helmet({contentSecurityPolicy:{directives:{imgSrc:["'self'","data:","blob:","https://tile.openstreetmap.org"],mediaSrc:["'self'","blob:"]}}}));
+app.use(helmet({contentSecurityPolicy:{directives:{imgSrc:["'self'","data:","blob:","https://tile.openstreetmap.org","https:"],mediaSrc:["'self'","blob:"]}}}));
 app.use(express.json({limit:'40kb'}));
 const attendanceChannels=require('./channel-routes').createChannels();
 app.use('/api/channels/oauth',attendanceChannels.callback);
