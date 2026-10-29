@@ -1,3 +1,15 @@
+VERSÃO 3.5 — CENTRAL DE MÓDULOS, FOTOS E VÍDEOS
+Nova central de tela inteira, vinte módulos com botão Voltar e visual unificado.
+Correção das fotos salvas na pasta oculta e conversão de imagens/vídeos para o site.
+Preserve .env, .product-media, banco e todas as demais pastas privadas.
+Pare o servidor e atualize o código. Na pasta do sistema, execute:
+  npm ci
+  npm run media:setup
+  npm start
+Depois use Ctrl+F5 no navegador.
+Não há nova variável obrigatória no .env ou nova alteração SQL em relação à 3.4.
+O conversor precisa de internet na instalação. Leia CENTRAL-E-MIDIAS-3.5.md.
+
 VERSÃO 3.4 — CADASTRO DE PRODUTOS
 Produtos em lista, editor por abas, estoque auditado, fotos/vídeo, promoções, SEO e complementos.
 Preserve .env, banco e pastas privadas; atualize os arquivos, execute npm ci e npm start; use Ctrl+F5.

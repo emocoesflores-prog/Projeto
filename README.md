@@ -1,3 +1,5 @@
+> **Versão 3.5:** central com vinte módulos em tela ampla, botão Voltar e correção/conversão de fotos e vídeos: [guia da atualização](CENTRAL-E-MIDIAS-3.5.md).
+
 > **Versão 3.4:** produtos em lista, cadastro por abas, estoque auditado, mídias, promoções, SEO e complementos: [guia de produtos e atualização](PRODUTOS-3.4.md).
 
 > **Versão 3.3:** PDV compacto, lista de pedidos com dados completos, cores por etapa e grupos do menu retráteis: [guia da operação](OPERACAO-3.3.md).
