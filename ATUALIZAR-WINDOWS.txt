@@ -1,3 +1,14 @@
+VERSÃO 3.6.1 — CORREÇÃO DE SEGURANÇA NAS DEPENDÊNCIAS
+Atualiza as bibliotecas Azure e elimina os dois alertas altos da auditoria da versão 3.6.
+Preserve .env, banco e pastas privadas. Com o código 3.6.1 e o servidor parado, execute:
+  npm ci
+  npm run media:setup
+  npm audit
+  npm start
+Não há nova variável de ambiente nem alteração de banco. Foram aprovados 124 testes.
+Os avisos deprecated podem continuar aparecendo e são distintos das falhas corrigidas.
+Leia SEGURANCA-3.6.1.md para a correção direta da instalação 3.6 com npm audit fix.
+
 VERSÃO 3.6 — ODF, ATALHOS E AGENDAMENTOS
 Atalhos PDV/ODF/GDE/Canais restaurados na Gestão de Pedidos.
 ODF em três etapas, atualização automática, início de produção e conferência para concluir.

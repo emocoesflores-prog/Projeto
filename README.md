@@ -1,3 +1,5 @@
+> **Versão 3.6.1:** correção dos dois alertas altos na cadeia de autenticação Azure do driver SQL Server; auditoria sem vulnerabilidades conhecidas: [guia da correção](SEGURANCA-3.6.1.md).
+
 > **Versão 3.6:** atalhos PDV/ODF/GDE/Canais restaurados, Oficina de Flores como KDS, preparação automática com verificação das impressoras e agendamentos com prazos e capacidade: [guia de configuração e atualização](ODF-E-AGENDAMENTOS-3.6.md).
 
 > **Versão 3.5:** central com vinte módulos em tela ampla, botão Voltar e correção/conversão de fotos e vídeos: [guia da atualização](CENTRAL-E-MIDIAS-3.5.md).
