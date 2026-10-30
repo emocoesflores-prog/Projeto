@@ -30,18 +30,15 @@ test('O site público não pode forjar venda no balcão ou pedido para agora',()
  assert.equal((await request('/api/orders',sale)).status,400);
  assert.equal((await request('/api/orders',{...sale,...customer,fulfillment:'pickup'})).status,400);
 }));
-test('Venda na loja tem conclusão própria e não pode sair para entrega',()=>session(async request=>{
+test('Venda Loja conclui diretamente ao confirmar recebimento e não entra em produção',()=>session(async request=>{
  let o=(await request('/api/admin/orders',sale)).body;
  async function patch(data){const r=await request('/api/admin/orders/'+o.id,{...data,version:o.version},'PATCH');if(r.status===200)o=r.body;return r}
- assert.equal((await patch({action:'payment',confirmed:true,reference:'Conferência no balcão'})).status,200);assert.equal(o.status,'Recebido');
- await patch({action:'status',status:'Em preparação'});
- await patch({action:'production',checklist:{arrangement:true,card:false,packaging:true},florist:'Florista teste',driver:'',internalNote:''});
- await patch({action:'status',status:'Pronto'});
- assert.equal((await patch({action:'status',status:'Saiu para entrega'})).status,400);
- assert.equal((await patch({action:'status',status:'Concluído na loja'})).status,200);assert.equal(o.status,'Concluído na loja');
+ assert.equal(o.status,'Aguardando pagamento');assert.equal((await patch({action:'payment',confirmed:true,reference:'Conferência no balcão'})).status,200);assert.equal(o.status,'Concluído');assert.ok(o.completedAt);
+ assert.equal((await patch({action:'status',status:'Aguardando preparação'})).status,409);
+ assert.equal((await patch({action:'status',status:'Saiu para entrega'})).status,409);
  assert.equal((await patch({action:'status',status:'Cancelado',reason:'Pedido concluído'})).status,409);
 }));
 test('Horários usam São Paulo e bloqueiam faixas já encerradas sem fechar domingos por suposição',()=>{
  const now=new Date('2026-10-16T16:00:00Z'); // 13h em São Paulo
- assert.equal(options.localTime(now),'13:00');assert.equal(options.expired('2026-10-16','10:50 - 12:30',now),true);assert.equal(options.expired('2026-10-16','13:40 - 15:20',now),false);assert.equal(options.expired('2026-10-18','09:10 - 10:50',now),false);assert.equal(options.modality('store'),'Venda na Loja');assert.equal(options.period('09:10 - 10:50'),'Manhã');
+ assert.equal(options.localTime(now),'13:00');assert.equal(options.expired('2026-10-16','10:50 - 12:30',now),true);assert.equal(options.expired('2026-10-16','13:40 - 15:20',now),false);assert.equal(options.expired('2026-10-18','09:10 - 10:50',now),false);assert.equal(options.modality('store'),'Venda Loja');assert.equal(options.period('09:10 - 10:50'),'Manhã');
 });

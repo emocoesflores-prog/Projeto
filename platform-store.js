@@ -111,7 +111,7 @@ function createPlatformStore({demo,getPool}){
     const method=s.payments.find(m=>m.active&&m.id===order.paymentMethod);if(!method)throw Object.assign(Error('Esta forma de pagamento não está disponível.'),{status:400});
 
     let discount;try{discount=rules.discount(s.coupons,couponCode,order.total-order.shippingFee);}catch(e){throw Object.assign(e,{status:400});}
-    const next={...order,scheduleName:s.schedule.slots.find(slot=>slot.label===order.timeSlot&&slot.modes.includes(order.fulfillment))?.name||'',items:order.items.map(item=>{const p=require('./product-domain').normalize(tenant.profile.catalog.find(p=>p.id===item.id));return {...item,includes:p.includes,internalInstructions:p.internalInstructions,cost:p.cost,fiscal:p.fiscal};}),total:order.total-discount.amount,discount:discount.coupon,paymentMethodName:method.name};
+    const next={...order,preparationMinutes:require('./tenant-configuration').state(tenant).pickup.preparationMinutes,scheduleName:s.schedule.slots.find(slot=>slot.label===order.timeSlot&&slot.modes.includes(order.fulfillment))?.name||'',items:order.items.map(item=>{const p=require('./product-domain').normalize(tenant.profile.catalog.find(p=>p.id===item.id));return {...item,includes:p.includes,internalInstructions:p.internalInstructions,cost:p.cost,fiscal:p.fiscal};}),total:order.total-discount.amount,discount:discount.coupon,paymentMethodName:method.name};
     if(expectedTotal!==undefined&&expectedTotal!==next.total)throw Object.assign(Error('O total mudou. Confira o orçamento atualizado.'),{status:409});
     if(discount.coupon){s.coupons.find(c=>c.id===discount.coupon.id).used++;s.revision++;tenant.profile.operations=s;}
     if(events.length){s.revision++;tenant.profile.operations=s;}return {next,events};

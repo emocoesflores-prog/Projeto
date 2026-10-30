@@ -1,3 +1,17 @@
+VERSÃO 3.7 — PEDIDOS AO VIVO E PAINEL DE RETIRADAS
+Voltar respeita a origem dos atalhos; PDV mostra o texto Voltar.
+Gestão, ODF, GDE e retiradas compartilham as etapas e recebem eventos do servidor.
+Venda Loja não entra na ODF e conclui automaticamente após confirmar recebimento.
+Operação > Painel de Pedidos: somente retiradas, número do pedido e previsão.
+Configurações > Painel de Pedidos: tempo de preparo para agora, individual por loja.
+Preserve .env, banco e pastas privadas. Pare o servidor, atualize o código e execute:
+  npm ci
+  npm run media:setup
+  npm audit
+  npm start
+Pressione Ctrl+F5 em todas as telas abertas. Não há nova alteração SQL nem novo .env.
+Leia PEDIDOS-AO-VIVO-3.7.md para o fluxo, pedidos antigos e limites da sincronização.
+
 VERSÃO 3.6.1 — CORREÇÃO DE SEGURANÇA NAS DEPENDÊNCIAS
 Atualiza as bibliotecas Azure e elimina os dois alertas altos da auditoria da versão 3.6.
 Preserve .env, banco e pastas privadas. Com o código 3.6.1 e o servidor parado, execute:

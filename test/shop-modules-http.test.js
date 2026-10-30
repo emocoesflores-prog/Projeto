@@ -23,7 +23,8 @@ test('lojas isoladas: categorias, cupons, caixa, produção, rota e agendamentos
   const created=results.find(r=>r.status===201).data;let o=(await ok('/api/admin/orders/'+created.id,undefined,a)).data;assert.equal(o.total,15410);assert.equal(o.discount.code,'BEMVINDO');assert.equal((await api('/api/admin/orders/'+o.id,undefined,b)).status,404);
   o=(await ok('/api/admin/orders/'+o.id,{action:'payment',version:o.version,confirmed:true,reference:'Pix conferido manualmente'},a,'PATCH')).data;
   async function production(advance){const result=await change('workshop.save',{orderId:o.id,orderVersion:o.version,checklist:{arrangement:true,card:true,packaging:true},florist:'Florista A',internalNote:'Teste',advance});o=result.data.orders[0];}
-  await production(true);assert.equal(o.status,'Em preparação');await production(true);assert.equal(o.status,'Pronto');
+  o=(await ok('/api/admin/orders/'+o.id,{action:'status',version:o.version,status:'Aguardando preparação'},a,'PATCH')).data;
+  o=(await change('workshop.start',{orderId:o.id,orderVersion:o.version})).data.orders[0];assert.equal(o.status,'Em preparação');await production(true);assert.equal(o.status,'Pronto aguardando entregador');
   await change('driver.save',{name:'Entregador A',phone:'11988887777',vehicle:'Moto',plate:'ABC1D23',active:true,notes:''});const driver=(await state(a)).state.drivers[0];
   const p=(await ok('/api/admin/routes/plan',{origin:{lat:-23.65,lng:-46.46},start:'2099-01-01T08:00:00-03:00',stops:[{orderId:o.id,location:{lat:-23.66,lng:-46.47}}]},a)).data;
   assert.equal((await api('/api/admin/operations',{action:'route.create',version:(await state(b)).state.revision,data:{planId:p.planId,driverId:driver.id,name:'Rota roubada'}},b)).status,409);

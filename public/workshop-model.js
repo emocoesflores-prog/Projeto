@@ -1,8 +1,8 @@
 (function(root){
- const options=typeof module==='object'?require('./order-options'):root.orderOptions;
+ const flow=typeof module==='object'?require('./order-flow'):root.OrderFlow;
  function windowOf(order){if(!/^\d{4}-\d{2}-\d{2}$/.test(order.date||'')||!/^([01]\d|2[0-3]):[0-5]\d - ([01]\d|2[0-3]):[0-5]\d$/.test(order.timeSlot||''))return null;const start=new Date(order.date+'T'+order.timeSlot.slice(0,5)+':00-03:00'),end=new Date(order.date+'T'+order.timeSlot.slice(-5)+':00-03:00');if(!Number.isFinite(+start)||end<=start)return null;return {start,end};}
  function due(order,preferences,now=new Date()){const w=windowOf(order);return !!(preferences.autoPrepare&&order.paymentStatus==='paid'&&['Recebido','Agendado'].includes(order.status)&&order.scheduleMode!=='now'&&order.fulfillment!=='store'&&w&&+w.start-preferences.preparationLeadMinutes*60000<=+now);}
- function lane(order){if(order.paymentStatus!=='paid')return null;if(order.status==='Em preparação')return order.workshopStartedAt?'working':'queue';if(['Pronto','Esperando retirada'].includes(order.status))return 'ready';return null;}
+ function lane(order){if(order.paymentStatus!=='paid'||order.fulfillment==='store')return null;const status=flow.status(order);return status==='Aguardando preparação'?'queue':status==='Em preparação'?'working':null;}
  function urgency(order,now=new Date()){const w=windowOf(order);if(!w)return {tone:'normal',label:'Pedido para agora',target:null};if(+now>+w.end)return {tone:'late',label:'Período encerrado',target:w.end};if(+now>=+w.start)return {tone:'soon',label:'Dentro do período',target:w.end};const minutes=Math.ceil((w.start-now)/60000);return {tone:minutes<=30?'soon':'normal',label:minutes<60?'Começa em '+minutes+' min':'Começa às '+order.timeSlot.slice(0,5),target:w.start};}
  const api={windowOf,due,lane,urgency};if(typeof module==='object')module.exports=api;else root.WorkshopModel=api;
 })(globalThis);

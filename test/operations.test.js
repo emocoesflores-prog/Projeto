@@ -26,12 +26,13 @@ test('Entrega: recebimento, conferência floral, responsável e histórico',()=>
  let r=await patch({action:'payment',confirmed:true,reference:'Pix verificado 123'});assert.equal(r.status,200);o=r.body;assert.equal(o.status,'Agendado');assert.equal(o.payment.amount,o.total);assert.equal(o.payment.source,'manual');
  assert.equal((await patch({action:'payment',confirmed:true,reference:'duplicado'})).status,409);
  assert.equal((await request('/api/admin/orders/'+o.id,{action:'status',version:0,status:'Em preparação'},'PATCH')).status,409);
+ o=(await patch({action:'status',status:'Aguardando preparação'})).body;
  o=(await patch({action:'status',status:'Em preparação'})).body;
- assert.equal((await patch({action:'status',status:'Pronto'})).status,409);
+ assert.equal((await patch({action:'status',status:'Pronto aguardando entregador'})).status,409);
  o=(await patch({action:'production',checklist:{arrangement:true,packaging:true,card:false},florist:'Maria',driver:'',internalNote:'Cuidado com as pétalas'})).body;
- assert.equal((await patch({action:'status',status:'Pronto'})).status,409,'Mensagem precisa ser conferida');
+ assert.equal((await patch({action:'status',status:'Pronto aguardando entregador'})).status,409,'Mensagem precisa ser conferida');
  o=(await patch({action:'production',checklist:{arrangement:true,packaging:true,card:true},florist:'Maria',driver:'',internalNote:'Cuidado com as pétalas'})).body;
- o=(await patch({action:'status',status:'Pronto'})).body;
+ o=(await patch({action:'status',status:'Pronto aguardando entregador'})).body;
  assert.equal((await patch({action:'status',status:'Esperando retirada'})).status,400);
  assert.equal((await patch({action:'status',status:'Saiu para entrega'})).status,409);
  o=(await patch({action:'production',checklist:o.checklist,florist:'Maria',driver:'João',internalNote:'Cuidado'})).body;
@@ -49,12 +50,12 @@ test('Retirada segue fluxo próprio; edição preserva preço e modalidade',()=>
  let r=await patch({action:'details',details});assert.equal(r.status,200);o=r.body;assert.equal(o.total,29800);assert.equal(o.shippingFee,0);
  assert.equal((await patch({action:'details',details:{...details,fulfillment:'delivery',city:'Mauá',address:'Rua Teste, 100, Centro'}})).status,409);
  o=(await patch({action:'payment',confirmed:true,reference:'Cartão operadora ABC'})).body;
+ o=(await patch({action:'status',status:'Aguardando preparação'})).body;
  o=(await patch({action:'status',status:'Em preparação'})).body;
  o=(await patch({action:'production',checklist:{arrangement:true,card:true,packaging:true},florist:'Maria',driver:'',internalNote:''})).body;
- o=(await patch({action:'status',status:'Pronto'})).body;
+ o=(await patch({action:'status',status:'Pronto aguardando retirada'})).body;
  assert.equal((await patch({action:'status',status:'Saiu para entrega'})).status,400);
- o=(await patch({action:'status',status:'Esperando retirada'})).body;
- o=(await patch({action:'status',status:'Retirado'})).body;assert.equal(o.status,'Retirado');
+  o=(await patch({action:'status',status:'Concluído'})).body;assert.equal(o.status,'Concluído');
 }));
 test('Cancelamento exige motivo e sinaliza estorno sem executar devolução',()=>session(async(request,create)=>{
  let o=(await create(data)).body;
@@ -73,7 +74,7 @@ test('Alterar cartão de pedido pronto exige reconferência e preserva o histór
  const original=normalizeOrder({...data,version:3,status:'Pronto',paymentStatus:'paid',total:31800,checklist:{arrangement:true,card:true,packaging:true}});
  const details={...data,recipient:'Novo destinatário'};delete details.items;delete details.paymentMethod;
  const updated=applyMutation(original,{action:'details',version:3,details});
- assert.equal(updated.status,'Em preparação');assert.equal(updated.checklist.card,false);assert.equal(original.checklist.card,true);
+ assert.equal(updated.status,'Aguardando preparação');assert.equal(updated.checklist.card,false);assert.equal(original.checklist.card,true);
  assert.ok(updated.history.at(-1).changes.some(c=>c.field==='recipient'&&c.before==='Destinatária Teste'&&c.after==='Novo destinatário'));
  assert.throws(()=>applyMutation(original,{action:'production',version:3,checklist:{arrangement:false,card:true,packaging:true},florist:'Maria',driver:'João',internalNote:''}),/Não remova conferências/);
 });

@@ -22,8 +22,9 @@ const platformAuth=require('./platform-auth').createPlatformAuth(platformStore,{
 let pool,demoSettings={...defaults};
 const store=createOrderStore({demo,getPool:()=>pool,getTenant:tenantId,multi});
 const customers=createCustomerStore({demo,getPool:()=>pool,getTenant:tenantId,multi});
+const realtime=require('./realtime').createRealtime();
 const printers=require('./printer-service').createPrinterService();
-const workshopService=require('./workshop-service').createWorkshopService({platformStore,orders:store,printers});
+const workshopService=require('./workshop-service').createWorkshopService({platformStore,orders:store,printers,onChanged:id=>realtime.publish(id)});
 app.locals.workshopService=workshopService;app.locals.printerService=printers;
 async function readSettings(){
  if(multi){const tenant=await platformStore.tenant(tenantId());const ops=require('./shop-operations').state(tenant);if(!tenant?.active)throw new OrderError('Loja indisponível.',404);const configuration=require('./tenant-configuration').state(tenant);return {storefront:configuration.storefront,pdv:configuration.pdv,schedule:ops.schedule,payments:ops.payments.filter(m=>m.active),appearance:ops.appearance,companyHours:ops.companyHours,distance:ops.distance,orderingBlocked:require('./finance').access(tenant).blocked&&require('./finance').access(tenant).blockSite,deliveryFee:tenant.profile.deliveryFee??defaults.deliveryFee,deliveryRates:tenant.profile.deliveryRates||[],pickupAddress:tenant.profile.pickupAddress||'',pickupLocations:tenant.profile.pickupLocations,assistantName:tenant.profile.assistantName||(tenant.id===DEFAULT_TENANT?'Florzinha':'Assistente'),deliveryCities:require('./tenant-context').policy(tenant).deliveryCities,name:tenant.name,slug:tenant.slug,city:tenant.profile.city||'',state:tenant.profile.state||'',phone:tenant.profile.phone||''};}
@@ -35,6 +36,8 @@ async function readSettings(){
 app.use(helmet({contentSecurityPolicy:{directives:{imgSrc:["'self'","data:","blob:","https://tile.openstreetmap.org","https:"],mediaSrc:["'self'","blob:","https:"]}}}));
 app.use(express.json({limit:'40kb'}));
 const attendanceChannels=require('./channel-routes').createChannels();
+// Emite apenas depois de a rota concluir sua transação, antes de devolver o JSON.
+app.use((req,res,next)=>{const path=req.originalUrl.split('?')[0],json=res.json;res.json=function(body){if(!['GET','HEAD','OPTIONS'].includes(req.method)&&res.statusCode<400&&(/^\/api\/admin\//.test(path)||path==='/api/orders'||/^\/api\/platform\/tenants\//.test(path))){const id=path.startsWith('/api/platform/')?req.params.id:req.account?.user.tenantId||tenantId();if(id){const channels=/\/(whatsapp|channels)\//.test(path);let topics=channels?['channels']:['operations'];if(!channels){if(path.includes('/customers'))topics=['customers'];else if(path.includes('/orders'))topics=req.method==='PATCH'?['orders','operations']:['orders','operations','products'];else if(path.includes('/operations')){const action=req.body?.action||'';if(/^(workshop|route)\./.test(action))topics=['orders','operations'];else if(/^(product|category)\./.test(action))topics=['operations','products'];}else if(path.includes('/product'))topics=['operations','products'];else if(path.startsWith('/api/platform/'))topics=['orders','operations','products','customers'];}realtime.publish(id,topics);if(!channels)queueMicrotask(()=>workshopService.tick());}}return json.call(this,body);};next();});
 app.use('/api/channels/oauth',attendanceChannels.callback);
 app.use('/api',rateLimit({windowMs:60000,limit:300}));
 if(multi){app.use('/api/auth',platformAuth.router);app.use('/api/platform',platformAuth.sameOrigin,platformAuth.platform);}
@@ -95,6 +98,7 @@ app.use('/api/admin',(req,res,next)=>{
  if(!expected||Buffer.byteLength(given)!==Buffer.byteLength(expected)||!timingSafeEqual(Buffer.from(given),Buffer.from(expected)))return res.status(401).json({error:'Acesso não autorizado'});
  next();
 });
+app.get('/api/admin/events',(req,res)=>realtime.stream(req,res,tenantId()));
 const whatsappService = require('./whatsapp-service').createWhatsAppService();
 const legacyWhatsAppRouter=require('./whatsapp-routes')(whatsappService);
 app.use('/api/admin/channels',attendanceChannels.router);

@@ -9,7 +9,7 @@ async function plan(input,orders,{key='',serviceMinutes=5,estimatedSpeed=30,now=
  const p=inputSchema.safeParse(input);if(!p.success)throw new OrderError('Informe origem, localização de cada parada e início da rota.',400);
  const d=p.data;if(new Set(d.stops.map(s=>s.orderId)).size!==d.stops.length)throw new OrderError('Não repita pedidos na rota.',400);
  if(new Date(d.start)<new Date(now.getTime()-5*60000))throw new OrderError('Escolha um início de rota atual ou futuro.',400);
- const selected=d.stops.map(s=>{const o=orders.find(o=>o.id===s.orderId);if(!o||o.status!=='Pronto'||o.paymentStatus!=='paid'||o.fulfillment!=='delivery')throw new OrderError('Selecione somente pedidos pagos e prontos desta loja.',409);return {...s,order:o};});
+ const selected=d.stops.map(s=>{const o=orders.find(o=>o.id===s.orderId);if(!o||require('./public/order-flow').stage(o)!=='ready'||o.paymentStatus!=='paid'||o.fulfillment!=='delivery')throw new OrderError('Selecione somente pedidos pagos e prontos desta loja.',409);return {...s,order:o};});
  if(new Set(selected.map(s=>s.order.date)).size!==1)throw new OrderError('Crie uma rota para cada dia de entrega.',400);
  if(require('./public/order-options').localDate(new Date(d.start))!==selected[0].order.date)throw new OrderError('O início deve corresponder ao dia de entrega dos pedidos.',400);
  const points=[d.origin,...selected.map(s=>s.location)];let matrix;

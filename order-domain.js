@@ -2,9 +2,9 @@ const {z}=require('zod');
 const {detailsSchema,today}=require('./validation');
 const options=require('./public/order-options');
 class OrderError extends Error{constructor(message,status=409){super(message);this.status=status}}
-const terminal=['Entregue','Retirado','Concluído na loja','Cancelado'];
-function nextStatus(order){return {'Recebido':'Em preparação','Agendado':'Em preparação','Em preparação':'Pronto','Pronto':order.fulfillment==='delivery'?'Saiu para entrega':order.fulfillment==='store'?'Concluído na loja':'Esperando retirada','Esperando retirada':'Retirado','Saiu para entrega':'Entregue'}[order.status]||null}
-function normalizeOrder(order){return {...order,version:order.version||0,paymentStatus:order.paymentStatus||'pending',history:order.history||[],checklist:order.checklist||{arrangement:false,card:false,packaging:false}}}
+const flow=require('./public/order-flow');
+function nextStatus(order){return flow.next(order)}
+function normalizeOrder(order){return {...order,status:flow.status(order),version:order.version||0,paymentStatus:order.paymentStatus||'pending',history:order.history||[],checklist:order.checklist||{arrangement:false,card:false,packaging:false}}}
 function event(order,type,description){order.history.push({at:new Date().toISOString(),actor:'Administrador',type,description})}
 const revision=z.number().int().nonnegative();
 const mutationSchema=z.discriminatedUnion('action',[
@@ -17,11 +17,12 @@ function applyMutation(original,input){
  const parsed=mutationSchema.safeParse(input);if(!parsed.success)throw new OrderError('Confira os dados, a confirmação e a versão do pedido.',400);
  const data=parsed.data,order=normalizeOrder(structuredClone(original));
  if(data.version!==order.version)throw new OrderError('Este pedido foi alterado em outra tela. Atualize os dados antes de continuar.');
- if(terminal.includes(order.status))throw new OrderError('Este pedido já foi encerrado e não pode ser alterado.');
+ if(flow.closed(order))throw new OrderError('Este pedido já foi encerrado e não pode ser alterado.');
+ if(order.status==='Entregue'&&!(data.action==='status'&&data.status==='Concluído'))throw new OrderError('A entrega já foi confirmada. Finalize o pedido como Concluído.');
  switch(data.action){
   case 'payment':
    if(order.paymentStatus==='paid')throw new OrderError('O pagamento já foi registrado.');
-   order.paymentStatus='paid';order.payment={method:order.paymentMethod,amount:order.total,reference:data.reference,recordedAt:new Date().toISOString(),source:'manual'};order.status=order.scheduleMode==='now'?'Recebido':'Agendado';
+   order.paymentStatus='paid';order.payment={method:order.paymentMethod,amount:order.total,reference:data.reference,recordedAt:new Date().toISOString(),source:'manual'};order.status=order.fulfillment==='store'?'Concluído':order.scheduleMode==='now'?'Aguardando preparação':'Agendado';if(order.fulfillment==='store'){order.completedAt=new Date().toISOString();event(order,'status','Venda Loja concluída automaticamente após confirmação do recebimento.');}
    event(order,'payment',`Recebimento integral registrado manualmente (${require('./public/shop-rules').paymentLabel(order.paymentMethod,order.paymentMethodName)}). Referência: ${data.reference}. Sem cobrança ou verificação bancária pelo sistema.`);break;
   case 'status':
    if(data.status==='Cancelado'){
@@ -31,11 +32,12 @@ function applyMutation(original,input){
    }
    if(order.paymentStatus!=='paid')throw new OrderError('Registre a confirmação do recebimento antes de iniciar a produção.',400);
    if(data.status!==nextStatus(order))throw new OrderError('Etapa inválida para este pedido.',400);
-   if(data.status==='Pronto'&&(!order.checklist.arrangement||!order.checklist.packaging||(order.message&&!order.checklist.card)))throw new OrderError('Confira arranjo, embalagem e cartão antes de marcar como pronto.');
+   if(data.status===flow.ready(order)&&(!order.checklist.arrangement||!order.checklist.packaging||(order.message&&!order.checklist.card)))throw new OrderError('Confira arranjo, embalagem e cartão antes de marcar como pronto.');
    if(data.status==='Saiu para entrega'&&!order.driver)throw new OrderError('Informe o entregador antes de despachar.');
-   order.status=data.status;event(order,'status',`Etapa alterada para ${data.status}.`);break;
+   if(data.status==='Em preparação')order.workshopStartedAt=new Date().toISOString();
+   order.status=data.status;if(data.status==='Concluído')order.completedAt=new Date().toISOString();if(data.status==='Entregue')order.deliveredAt=new Date().toISOString();event(order,'status',`Etapa alterada para ${data.status}.`);break;
   case 'details':{
-   if(['Saiu para entrega','Esperando retirada'].includes(order.status))throw new OrderError('Os dados de entrega não podem mudar após a expedição.');
+   if(['Saiu para entrega','Pronto aguardando retirada'].includes(order.status))throw new OrderError('Os dados de entrega não podem mudar após a expedição.');
    if(data.details.pickupLocationId&&data.details.pickupLocationId!==order.pickupLocationId)throw new OrderError('O local de retirada deste pedido está preservado. Crie outro pedido para alterar a unidade.');
    if(data.details.fulfillment!==order.fulfillment)throw new OrderError('A modalidade não pode ser alterada: crie outro pedido para preservar o frete original.');
    if(data.details.date!==order.date&&data.details.date<today())throw new OrderError('O novo agendamento não pode ser no passado.',400);
@@ -47,12 +49,12 @@ function applyMutation(original,input){
    const flowersChanged=changes.some(key=>['flowerNotes','substitution'].includes(key));
    if(cardChanged)order.checklist.card=false;
    if(flowersChanged)order.checklist.arrangement=false;
-   if((cardChanged||flowersChanged)&&order.status==='Pronto'){order.status='Em preparação';event(order,'status','Conferência reiniciada após alterar o cartão ou as orientações do arranjo.');}
+   if((cardChanged||flowersChanged)&&order.status===flow.ready(order)){order.status='Aguardando preparação';delete order.workshopStartedAt;event(order,'status','Conferência reiniciada após alterar o cartão ou as orientações do arranjo.');}
    event(order,'details',`Dados atualizados: ${changes.join(', ')||'sem alteração de campos'}. Valores e itens preservados.`);order.history.at(-1).changes=auditChanges;break;
   }
   case 'production':
    const productionChanges=['checklist','florist','driver','internalNote'].filter(field=>JSON.stringify(order[field])!==JSON.stringify(data[field])).map(field=>({field,before:order[field]??null,after:data[field]}));
-   if(['Pronto','Saiu para entrega','Esperando retirada'].includes(order.status)&&(!data.checklist.arrangement||!data.checklist.packaging||(order.message&&!data.checklist.card)))throw new OrderError('O pedido já foi conferido. Não remova conferências de um pedido pronto ou expedido.');
+   if([flow.ready(order),'Saiu para entrega'].includes(order.status)&&(!data.checklist.arrangement||!data.checklist.packaging||(order.message&&!data.checklist.card)))throw new OrderError('O pedido já foi conferido. Não remova conferências de um pedido pronto ou expedido.');
    Object.assign(order,{checklist:data.checklist,florist:data.florist,driver:data.driver,internalNote:data.internalNote});
    event(order,'production','Checklist, responsáveis e observações internas atualizados.');order.history.at(-1).changes=productionChanges;break;
  }

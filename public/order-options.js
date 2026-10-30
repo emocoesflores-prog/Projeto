@@ -5,7 +5,7 @@
  function localTime(date=new Date()){return new Intl.DateTimeFormat('en-GB',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(date)}
  function period(slot){return Number(slot.slice(0,2))<12?'Manhã':'Tarde'}
  function expired(date,slot,now=new Date()){return date<localDate(now)||(date===localDate(now)&&slot.slice(-5)<=localTime(now))}
- function modality(mode){return {store:'Venda na Loja',pickup:'Retirada',delivery:'Entrega'}[mode]||'Não informada'}
+ function modality(mode){return {store:'Venda Loja',pickup:'Retirada',delivery:'Entrega'}[mode]||'Não informada'}
  function scheduleLabel(order){if(order.scheduleMode==='now')return 'Pedido para agora';const date=new Date(order.date+'T12:00:00Z').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});return date+' · '+(order.timeSlot||order.period)}
  const api={slots,localDate,localTime,period,expired,modality,scheduleLabel};
  if(typeof module==='object')module.exports=api;else root.orderOptions=api;
