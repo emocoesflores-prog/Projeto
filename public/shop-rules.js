@@ -20,6 +20,8 @@
   if(!coupon||!coupon.active||today<coupon.starts||today>coupon.ends||subtotal<coupon.minimum||coupon.limit>0&&(coupon.used||0)>=coupon.limit)throw Error('Cupom indisponível, vencido ou não aplicável a este pedido.');
   const amount=Math.min(subtotal,coupon.type==='percent'?Math.floor(subtotal*coupon.value/100):coupon.value);return {amount,coupon:{id:coupon.id,code:coupon.code,type:coupon.type,value:coupon.value,amount}};
  }
+ function capacity(schedule,order){if(!schedule?.enabled||order.scheduleMode==='now'||order.fulfillment==='store')return 0;const slot=schedule.slots.find(s=>s.label===order.timeSlot&&s.modes.includes(order.fulfillment));return slot?(slot.capacity??schedule.maxOrdersPerSlot??0):0;}
+ function occupies(order,date,slot,excludeId){return order.id!==excludeId&&order.status!=='Cancelado'&&order.scheduleMode!=='now'&&['delivery','pickup'].includes(order.fulfillment)&&order.date===date&&order.timeSlot===slot;}
  const paymentLabel=(code,name)=>name||({pix:'PIX',credit_card:'Cartão de crédito',debit_card:'Cartão de débito',cash:'Dinheiro',bank_transfer:'Transferência'}[code]||'Outra forma de pagamento');
- const api={validSlot,issue,slots,discount,paymentLabel};if(typeof module==='object')module.exports=api;else root.ShopRules=api;
+ const api={validSlot,issue,slots,discount,paymentLabel,capacity,occupies};if(typeof module==='object')module.exports=api;else root.ShopRules=api;
 })(globalThis);

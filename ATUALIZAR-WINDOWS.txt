@@ -1,3 +1,17 @@
+VERSÃO 3.6 — ODF, ATALHOS E AGENDAMENTOS
+Atalhos PDV/ODF/GDE/Canais restaurados na Gestão de Pedidos.
+ODF em três etapas, atualização automática, início de produção e conferência para concluir.
+Configurações > Oficina de Flores: preparação automática e minutos antes do início do período.
+Cadastros > Impressões: registre as filas do Windows pelo localhost no computador servidor.
+A automação vem desativada e exige todas as impressoras cadastradas disponíveis.
+Cadastros > Agendamentos: prazo máximo, capacidade por faixa, gerador e datas bloqueadas.
+Preserve .env, banco e pastas privadas. Atualize o código e execute na pasta do sistema:
+  npm ci
+  npm run media:setup
+  npm start
+Use Ctrl+F5. Não há nova variável obrigatória de .env nem alteração SQL em relação à 3.5.
+Leia ODF-E-AGENDAMENTOS-3.6.md para configurar e conhecer os limites de impressão.
+
 VERSÃO 3.5 — CENTRAL DE MÓDULOS, FOTOS E VÍDEOS
 Nova central de tela inteira, vinte módulos com botão Voltar e visual unificado.
 Correção das fotos salvas na pasta oculta e conversão de imagens/vídeos para o site.

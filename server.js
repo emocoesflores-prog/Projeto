@@ -22,6 +22,9 @@ const platformAuth=require('./platform-auth').createPlatformAuth(platformStore,{
 let pool,demoSettings={...defaults};
 const store=createOrderStore({demo,getPool:()=>pool,getTenant:tenantId,multi});
 const customers=createCustomerStore({demo,getPool:()=>pool,getTenant:tenantId,multi});
+const printers=require('./printer-service').createPrinterService();
+const workshopService=require('./workshop-service').createWorkshopService({platformStore,orders:store,printers});
+app.locals.workshopService=workshopService;app.locals.printerService=printers;
 async function readSettings(){
  if(multi){const tenant=await platformStore.tenant(tenantId());const ops=require('./shop-operations').state(tenant);if(!tenant?.active)throw new OrderError('Loja indisponível.',404);const configuration=require('./tenant-configuration').state(tenant);return {storefront:configuration.storefront,pdv:configuration.pdv,schedule:ops.schedule,payments:ops.payments.filter(m=>m.active),appearance:ops.appearance,companyHours:ops.companyHours,distance:ops.distance,orderingBlocked:require('./finance').access(tenant).blocked&&require('./finance').access(tenant).blockSite,deliveryFee:tenant.profile.deliveryFee??defaults.deliveryFee,deliveryRates:tenant.profile.deliveryRates||[],pickupAddress:tenant.profile.pickupAddress||'',pickupLocations:tenant.profile.pickupLocations,assistantName:tenant.profile.assistantName||(tenant.id===DEFAULT_TENANT?'Florzinha':'Assistente'),deliveryCities:require('./tenant-context').policy(tenant).deliveryCities,name:tenant.name,slug:tenant.slug,city:tenant.profile.city||'',state:tenant.profile.state||'',phone:tenant.profile.phone||''};}
  if(demo)return {...demoSettings};
@@ -98,7 +101,7 @@ app.use('/api/admin/channels',attendanceChannels.router);
 app.use('/api/admin/whatsapp',async(req,res,next)=>{try{const router=multi?(await tenantResources.get(req.account.user.tenantId)).router:legacyWhatsAppRouter;router(req,res,next);}catch(e){next(e)}});
 app.get('/api/admin/products',async(req,res,next)=>{try{res.set('Cache-Control','no-store').json(await readCatalog({audience:'system',privateData:false}));}catch(e){next(e)}});
 require('./product-routes')(app,{platformStore,multi,tenantId});
-require('./shop-routes')(app,{platformStore,store,multi,tenantId,readSettings,readCatalog});
+require('./shop-routes')(app,{platformStore,store,multi,tenantId,readSettings,readCatalog,printers,workshopService});
 app.get('/api/admin/performance',async(req,res,next)=>{try{
  const parsed=z.object({from:z.string(),to:z.string(),source:z.enum(['all','site','manual']).default('all'),fulfillment:z.enum(['all','delivery','pickup','store']).default('all')}).strict().safeParse(req.query);if(!parsed.success)throw new OrderError('Confira os filtros do relatório.',400);
  const {from,to,...filters}=parsed.data,analytics=require('./analytics'),period=analytics.range({from,to});
@@ -157,7 +160,7 @@ app.get('/api/admin/orders',async(req,res,next)=>{try{res.json(await store.list(
 app.post('/api/admin/orders',async(req,res,next)=>{try{res.status(201).json(await createOrder(req.body,'manual',req.account?.user.name||'Administrador'))}catch(e){next(e)}});
 app.patch('/api/admin/orders/:id',async(req,res,next)=>{try{
  if(!z.uuid().safeParse(req.params.id).success)throw new OrderError('Código de pedido inválido.',400);
- res.json(await store.mutate(req.params.id,req.body));
+ res.json(multi&&req.body?.action==='details'?await platformStore.rescheduleOrder(tenantId(),req.params.id,req.body,{demoOrders:store}):await store.mutate(req.params.id,req.body));
 }catch(e){next(e)}});
 app.get('/painel/:slug',async(req,res,next)=>{try{if(!multi)return res.sendStatus(404);const tenant=await platformStore.bySlug(req.params.slug);if(!tenant?.active||tenant.id===require('./tenant-context').PLATFORM_TENANT)return res.status(404).send('Painel indisponível.');res.sendFile(require('node:path').join(__dirname,'public/admin.html'));}catch(e){next(e)}});
 app.get('/loja/:slug',async(req,res,next)=>{try{if(!multi)return res.sendStatus(404);const tenant=await platformStore.bySlug(req.params.slug);if(!tenant?.active||tenant.id===require('./tenant-context').PLATFORM_TENANT)return res.status(404).send('Loja indisponível.');res.sendFile(require('node:path').join(__dirname,'public/index.html'));}catch(e){next(e)}});
@@ -182,8 +185,9 @@ async function start(){
  if(multi&&!demo){const check=await pool.request().query("SELECT OBJECT_ID(N'dbo.AppSessions',N'U') AS sessionsTable,COL_LENGTH(N'dbo.Orders',N'tenantId') AS orderTenant,COL_LENGTH(N'dbo.Customers',N'tenantId') AS customerTenant");if(!check.recordset[0].sessionsTable||!check.recordset[0].orderTenant||!check.recordset[0].customerTenant)throw Error('Execute npm run migrate:platform no banco atual com uma conta autorizada antes de iniciar a plataforma.');const company=await pool.request().query("SELECT id FROM dbo.Tenants WHERE id='00000000-0000-4000-8000-000000000002'");if(!company.recordset.length)throw Error('Atualize o esquema da empresa gestora com npm run migrate:platform.');}
  if(multi&&!demo){try{await pool.request().query(require('node:fs').readFileSync(require('node:path').join(__dirname,'sql/product-events.sql'),'utf8'));}catch(e){if([229,262].includes(e.number))throw Error('Histórico de produtos ainda não instalado. No SSMS, execute sql/product-events.sql no banco da plataforma com uma conta autorizada. Depois inicie novamente.');throw e;}}
  const httpServer=app.listen(process.env.PORT||3000,()=>console.log(`Floricultura iniciada (${demo?'DEMONSTRAÇÃO SEM PERSISTÊNCIA':'SQL Server'})`));
+ if(multi)workshopService.start();
  let shuttingDown=false;
- const shutdown=async()=>{if(shuttingDown)return;shuttingDown=true;const deadline=setTimeout(()=>process.exit(1),15000);httpServer.close();try{await tenantResources.close();await whatsappService.close();await sql.close();clearTimeout(deadline);process.exit(0);}catch{console.error('Não foi possível encerrar o navegador da sessão.');clearTimeout(deadline);process.exit(1);}};
+ const shutdown=async()=>{if(shuttingDown)return;shuttingDown=true;const deadline=setTimeout(()=>process.exit(1),15000);httpServer.close();try{await workshopService.stop();await tenantResources.close();await whatsappService.close();await sql.close();clearTimeout(deadline);process.exit(0);}catch{console.error('Não foi possível encerrar o navegador da sessão.');clearTimeout(deadline);process.exit(1);}};
  process.once('SIGINT',shutdown);process.once('SIGTERM',shutdown);
 }
 if(require.main===module)start().catch(async e=>{console.error(e.message);try{await sql.close()}catch{}process.exitCode=1});
