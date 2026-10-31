@@ -1,3 +1,16 @@
+VERSÃO 3.10 — PAINEL E FILTROS DE STATUS
+Fila e controles à esquerda; ficha do pedido ampliada à direita.
+Filtro de status com seleção múltipla, ícones, cores, quantidades e Aplicar filtro.
+Abas e ações com ícones; padrão visual compartilhado nos módulos e Inova.
+Preserve .env, banco e pastas privadas. Pare o servidor, atualize os arquivos e execute:
+  npm ci
+  npm run media:setup
+  npm audit
+  npm start
+Use Ctrl+F5 em todas as telas. Desde a 3.9, não há nova migração SQL nem variável de .env.
+Se estiver vindo da 3.8 ou anterior, execute também sql/pdv-drafts.sql conforme o guia da 3.9.
+Leia PAINEL-E-FILTROS-3.10.md para os filtros, atualização e validação.
+
 VERSÃO 3.9 — RASCUNHOS DO PDV, ODF E LEITURA DOS PEDIDOS
 PDV salva vendas em rascunho ao digitar/sair. Retome pelo botão Rascunhos.
 ODF salva a antecedência e funciona sem impressora; impressoras cadastradas indisponíveis pausam a liberação.

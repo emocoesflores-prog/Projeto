@@ -1,5 +1,15 @@
 # Prévia da central de pedidos
 
+## Painel e filtros · versão 3.10
+
+Dados fictícios em demonstração. Veja o [guia do painel e atualização](../PAINEL-E-FILTROS-3.10.md).
+
+![Fila à esquerda e ficha ampliada](gestao-pedidos-3.10.png)
+
+![Filtro múltiplo de status com ícones e contagens](filtro-status-3.10.png)
+
+![Produtos com o padrão visual compartilhado](produtos-padrao-3.10.png)
+
 ## Rascunhos e leitura dos pedidos · versão 3.9
 
 Dados fictícios em demonstração. Consulte o [guia de atualização e nova tabela SQL](../RASCUNHOS-E-OFICINA-3.9.md).

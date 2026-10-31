@@ -1,6 +1,6 @@
 {
   "name": "projeto",
-  "version": "3.9.0",
+  "version": "3.10.0",
   "description": "Delivery de floricultura com SQL Server",
   "main": "index.js",
   "directories": {
