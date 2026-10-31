@@ -1,5 +1,5 @@
 (function(root){
- const palettes={rose:'#aa2d57',blue:'#245ec7',lavender:'#7542ad'};
+ const palettes={rose:'#e0004d',blue:'#245ec7',lavender:'#7542ad'};
  const rgb=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));
  const luminance=hex=>rgb(hex).map(n=>n/255).map(n=>n<=.04045?n/12.92:((n+.055)/1.055)**2.4).reduce((a,n,i)=>a+n*[.2126,.7152,.0722][i],0);
  function foreground(hex){return luminance(hex)>.179?'#000000':'#ffffff';}

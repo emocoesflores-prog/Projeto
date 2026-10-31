@@ -23,7 +23,7 @@ $('#login').onsubmit=async e=>{e.preventDefault();billingBlocked=false;if(legacy
 $('#schedule-date').value=dashboardModel.localDate();$('#schedule-date').onchange=renderSchedule;
 function openDetail(o){showView('orders');OrderDesk.select(o.id)}
 
-$('#export').onclick=()=>{function cell(v){let text=String(v??'');if(/^[=+\-@\t\r\n]/.test(text))text="'"+text;return '"'+text.replaceAll('"','""')+'"'}const rows=[['Código','Cliente','Data','Modalidade','Cidade','Status','Total (R$)'],...OrderDesk.visible().map(o=>[o.id,o.customer,o.date,orderOptions.modality(o.fulfillment),o.city||'',o.status,(o.total/100).toFixed(2)])];const url=URL.createObjectURL(new Blob(['\uFEFF'+rows.map(r=>r.map(cell).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'}));const a=element('a');a.href=url;a.download='solicitacoes-emocoes-flores.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
+$('#export').onclick=()=>OrderExport.open({auth,orders:OrderDesk.visible()});
 
 CustomerDirectory.init({auth});
 OrderDesk.init({getRole:()=>legacyMode?'owner':account?.role,getSettings:()=>account?.tenant.profile||{},getOrders:()=>orders,getProducts:()=>products,auth,onUpdate:order=>{orders=OrderCollection.merge(orders,[order]);render()},onConflict:load});
@@ -35,7 +35,7 @@ $('#assistant-settings-form').onsubmit=async event=>{event.preventDefault();cons
 
 DeliverySettingsUI.init({auth,onSaved:load});
 
-function clearWorkspace(message){OrderLive.stop();ShopModules.reset();++authEpoch;account=null;connected=false;currentView=null;ModuleHub.reset();showView('home');orders=[];products=[];render();$('#token').value='';$('#workspace').hidden=true;$('#auth-panel').hidden=false;$('#logout').hidden=true;$('#refresh').hidden=true;$('#mode-badge').textContent='Não conectado';$('#nav-count').textContent='—';$('#status').textContent=message;DeliverySettingsUI.reset();PerformanceUI.reset();CustomerDirectory.logout();OrderDesk.logout();AttendanceChannels.logout();WhatsAppDesk.logout()}
+function clearWorkspace(message){OrderExport.reset();OrderLive.stop();ShopModules.reset();++authEpoch;account=null;connected=false;currentView=null;ModuleHub.reset();showView('home');orders=[];products=[];render();$('#token').value='';$('#workspace').hidden=true;$('#auth-panel').hidden=false;$('#logout').hidden=true;$('#refresh').hidden=true;$('#mode-badge').textContent='Não conectado';$('#nav-count').textContent='—';$('#status').textContent=message;DeliverySettingsUI.reset();PerformanceUI.reset();CustomerDirectory.logout();OrderDesk.logout();AttendanceChannels.logout();WhatsAppDesk.logout()}
 let billingBlocked=false,checkingAccess=false;
 async function checkAccess(){if(legacyMode||checkingAccess||(!account&&!billingBlocked)||document.hidden)return;checkingAccess=true;const ticket=authEpoch;try{const response=await fetch('/api/auth/me',{headers:auth(),cache:'no-store'});if(ticket!==authEpoch)return;if(response.status===403){const data=await response.json();billingBlocked=true;clearWorkspace(data.error||'Acesso bloqueado. Consulte a Inova Facil.');}else if(response.status===401){billingBlocked=false;clearWorkspace('Sua sessão expirou. Entre novamente.');}else if(response.ok&&billingBlocked){billingBlocked=false;setAccount(await response.json());await load();}}catch{/* Falha de rede não muda o estado de pagamento. */}finally{checkingAccess=false;}}
 setInterval(checkAccess,10000);window.addEventListener('focus',checkAccess);document.addEventListener('visibilitychange',checkAccess);

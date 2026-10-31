@@ -1,3 +1,5 @@
+> **Versão 3.12:** visual premium no padrão da referência, valor/pagamento na segunda linha, cliente e endereço integrados aos cadastros e exportação real em XLS, PDF e Word: [guia da atualização](PAINEL-PREMIUM-3.12.md).
+
 > **Versão 3.11:** etiquetas com tamanho uniforme, botão Central de Módulos, ONLINE/OFFLINE, edição por lápis em cada informação e auditoria em tabelas separadas. **Novo script SQL:** [guia da atualização](EDICAO-E-HISTORICO-3.11.md).
 
 > **Versão 3.10:** fila e controles à esquerda, ficha ampliada à direita, filtro múltiplo de status com ícones/contagens e padrão visual compartilhado: [guia do painel e atualização](PAINEL-E-FILTROS-3.10.md).

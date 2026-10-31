@@ -8,6 +8,7 @@ function normalizeOrder(order){return {...order,id:String(order.id||'').toLowerC
 function event(order,type,description){order.history.push({at:new Date().toISOString(),actor:'Administrador',type,description})}
 const revision=z.number().int().nonnegative();
 const mutationSchema=z.discriminatedUnion('action',[
+ require('./order-selection').schema,
  z.object({action:z.literal('field'),version:revision,field:z.enum(['customer','phone','recipient','recipientPhone','address','schedule','occasion','deliveryReference','deliveryNotes','flowerNotes','substitution','message','anonymous']),value:z.unknown()}).strict(),
  z.object({action:z.literal('status'),version:revision,status:z.string(),reason:z.string().trim().max(500).default('')}),
  require('./payment-domain').schema,
@@ -18,6 +19,28 @@ const mutationSchema=z.discriminatedUnion('action',[
 function applyMutation(original,input,options={}){
  const parsed=mutationSchema.safeParse(input);if(!parsed.success)throw new OrderError('Confira os dados, a confirmação e a versão do pedido.',400);
  const data=parsed.data,order=normalizeOrder(structuredClone(original));
+ let selectionPatch={};
+ if(data.action==='selection'){
+  const {customer,address}=options.selection||{};
+  if(!customer||customer.id.toLowerCase()!==data.customerId.toLowerCase())throw new OrderError('Selecione o cadastro de cliente novamente.',400);
+  if(data.field==='address'&&order.fulfillment!=='delivery')throw new OrderError('Este pedido não é de entrega.',400);
+  if(data.field==='address'&&order.customerId&&order.customerId.toLowerCase()!==customer.id.toLowerCase())throw new OrderError('Selecione primeiro o cliente do pedido.',400);
+  if(data.field==='address'&&!order.customerId&&require('./contact').normalizePhone(order.phone)!==customer.phone)throw new OrderError('Vincule o cliente pelo campo Nome do Cliente antes de escolher o endereço.',400);
+  if(order.fulfillment==='delivery'&&data.field==='customer'&&String(order.customerId||'').toLowerCase()!==customer.id.toLowerCase()&&!address)throw new OrderError('Escolha também o endereço de entrega deste cliente.',400);
+  if(data.addressId&&(!address||address.id.toLowerCase()!==data.addressId.toLowerCase()||address.version!==data.addressVersion))throw new OrderError('Selecione novamente o endereço atualizado.',409);
+  const patch=data.field==='customer'?{customer:customer.name,phone:customer.phone}:{};
+  selectionPatch={customerId:customer.id,customerIdentified:true};
+  if(address){
+   if(order.fulfillment!=='delivery')throw new OrderError('Este pedido não usa endereço de entrega.',400);
+   Object.assign(patch,{recipient:address.recipient,recipientPhone:address.recipientPhone,address:require('./address-domain').formatAddress(address),city:address.city,neighborhood:address.neighborhood,deliveryReference:address.reference||''});
+   selectionPatch.deliveryAddress=Object.fromEntries(Object.entries(address).filter(([key])=>key!=='history'));
+  }
+  const keys=['customer','phone','recipient','recipientPhone','pickupLocationId','neighborhood','deliveryReference','fulfillment','city','address','date','period','scheduleMode','timeSlot','message','anonymous','occasion','flowerNotes','deliveryNotes','substitution'];
+  const details=detailsSchema.safeParse({...Object.fromEntries(keys.filter(k=>original[k]!==undefined).map(k=>[k,original[k]])),...patch});
+  if(!details.success)throw new OrderError(details.error.issues[0].message,400);
+  data.action='details';data.details=details.data;
+ }
+
  if(data.action==='field'){
   const keys=['customer','phone','recipient','recipientPhone','pickupLocationId','neighborhood','deliveryReference','fulfillment','city','address','date','period','scheduleMode','timeSlot','message','anonymous','occasion','flowerNotes','deliveryNotes','substitution'];
   let patch={[data.field]:data.value};
@@ -58,16 +81,18 @@ function applyMutation(original,input,options={}){
    if(data.details.date!==order.date&&data.details.date<today())throw new OrderError('O novo agendamento não pode ser no passado.',400);
    if(data.details.timeSlot&&(data.details.date!==order.date||data.details.timeSlot!==order.timeSlot)&&orderOptions.expired(data.details.date,data.details.timeSlot))throw new OrderError('A nova faixa de horário já terminou.',400);
    const changes=Object.keys(data.details).filter(key=>data.details[key]!==order[key]);
-   if(!changes.length)return order;
+   const associated=Object.keys(selectionPatch).filter(key=>JSON.stringify(order[key])!==JSON.stringify(selectionPatch[key]));
+   if(!changes.length&&!associated.length)return order;
    const auditChanges=changes.map(field=>({field,before:order[field]??null,after:data.details[field]??null}));
-   Object.assign(order,data.details);
-   if(order.deliveryAddress&&changes.some(key=>['city','address','neighborhood'].includes(key))){if(order.deliveryReference===undefined)order.deliveryReference=order.deliveryAddress.reference||'';auditChanges.push({field:'deliveryAddress',before:structuredClone(order.deliveryAddress),after:null});delete order.deliveryAddress;}
+   auditChanges.push(...associated.map(field=>({field,before:order[field]??null,after:selectionPatch[field]})));
+   Object.assign(order,data.details,selectionPatch);
+   if(order.deliveryAddress&&!selectionPatch.deliveryAddress&&changes.some(key=>['city','address','neighborhood'].includes(key))){if(order.deliveryReference===undefined)order.deliveryReference=order.deliveryAddress.reference||'';auditChanges.push({field:'deliveryAddress',before:structuredClone(order.deliveryAddress),after:null});delete order.deliveryAddress;}
    const cardChanged=changes.some(key=>['message','anonymous','recipient','customer'].includes(key));
    const flowersChanged=changes.some(key=>['flowerNotes','substitution'].includes(key));
    if(cardChanged)order.checklist.card=false;
    if(flowersChanged)order.checklist.arrangement=false;
    if((cardChanged||flowersChanged)&&order.status===flow.ready(order)){order.status='Aguardando preparação';delete order.workshopStartedAt;event(order,'status','Conferência reiniciada após alterar o cartão ou as orientações do arranjo.');}
-   event(order,'details',`Dados atualizados: ${changes.join(', ')||'sem alteração de campos'}. Valores e itens preservados.`);order.history.at(-1).changes=auditChanges;break;
+   event(order,'details',`Dados atualizados: ${[...changes,...associated].join(', ')||'sem alteração de campos'}. Valores e itens preservados.`);order.history.at(-1).changes=auditChanges;break;
   }
   case 'production':
    const productionChanges=['checklist','florist','driver','internalNote'].filter(field=>JSON.stringify(order[field])!==JSON.stringify(data[field])).map(field=>({field,before:order[field]??null,after:data[field]}));
