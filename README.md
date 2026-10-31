@@ -1,3 +1,5 @@
+> **Versão 3.11:** etiquetas com tamanho uniforme, botão Central de Módulos, ONLINE/OFFLINE, edição por lápis em cada informação e auditoria em tabelas separadas. **Novo script SQL:** [guia da atualização](EDICAO-E-HISTORICO-3.11.md).
+
 > **Versão 3.10:** fila e controles à esquerda, ficha ampliada à direita, filtro múltiplo de status com ícones/contagens e padrão visual compartilhado: [guia do painel e atualização](PAINEL-E-FILTROS-3.10.md).
 
 > **Versão 3.9:** rascunhos automáticos do PDV por operador, correção da configuração/liberação da ODF, lista menor com ficha ampliada e cores distintas por status. **Nova tabela SQL:** [guia de atualização](RASCUNHOS-E-OFICINA-3.9.md).

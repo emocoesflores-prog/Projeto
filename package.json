@@ -1,6 +1,6 @@
 {
   "name": "projeto",
-  "version": "3.10.0",
+  "version": "3.11.0",
   "description": "Delivery de floricultura com SQL Server",
   "main": "index.js",
   "directories": {
@@ -11,7 +11,8 @@
     "dev": "node --watch server.js",
     "test": "node --test",
     "migrate:platform": "node scripts/migrate-platform.js",
-    "media:setup": "node scripts/setup-media.js"
+    "media:setup": "node scripts/setup-media.js",
+    "migrate:order-history": "node scripts/migrate-order-history.js"
   },
   "repository": {
     "type": "git",

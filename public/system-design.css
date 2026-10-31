@@ -29,3 +29,13 @@
 @media(max-width:430px){.dashboard-topbar [data-theme-toggle].system-action>span{display:none}}
 
 :root[data-admin-theme] .dashboard[data-panel-radius=soft] :is(.panel,.module-panel,.config-group,.platform-card,.finance-card,.customer-profile,.performance-card,.kds-ticket,.pm-row,.hub-tile,.config-tile,button,input,select,textarea){border-radius:6px}.storefront[data-store-radius=soft] .product-card{border-radius:10px}.storefront[data-store-radius=soft] :is(.button,input,select,textarea){border-radius:6px}:root[data-admin-theme] .dashboard.shop-large-font :is(input:not([type=checkbox]):not([type=radio]),select,textarea,.config-tile strong,.pm-row-info strong){font-size:var(--shop-font-size)!important}.dashboard.shop-large-font .choice-option-text strong{font-size:calc(var(--shop-font-size) - 3px)}.dashboard.shop-large-font .orders-filter-row{grid-template-columns:1fr 1fr}.dashboard.shop-large-font .orders-filter-row>#desk-tabs{grid-column:1/-1}
+
+/* Os atributos de visibilidade têm prioridade sobre o estilo dos botões. */
+:root[data-admin-theme] .dashboard [hidden]{display:none!important}
+:root[data-admin-theme] .dashboard-topbar .hub-header-actions .header-module-home{background:var(--ui-accent);border-color:var(--ui-accent);color:#fff;font-weight:750;box-shadow:0 3px 10px color-mix(in srgb,var(--ui-accent) 25%,transparent)}
+:root[data-admin-theme] .dashboard-topbar .header-module-home:hover{filter:brightness(1.1)}
+:root[data-admin-theme] .dashboard-topbar .live-connection{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:94px;height:34px;padding:6px 10px;box-sizing:border-box;border:1px solid #e5a5ae;border-radius:10px;font-size:12px;font-weight:800;letter-spacing:.04em;background:#ffe9ed;color:#a71635;white-space:nowrap}
+.dashboard-topbar .live-connection:before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+:root[data-admin-theme] .dashboard-topbar .live-connection[data-online=true]{background:#e4f8eb;border-color:#86caa0;color:#126734}
+:root[data-admin-theme=dark] .dashboard-topbar .live-connection{background:#451d29;color:#ffb3c0;border-color:#824052}
+:root[data-admin-theme=dark] .dashboard-topbar .live-connection[data-online=true]{background:#173d2b;color:#8fe3ab;border-color:#347f50}

@@ -8,6 +8,7 @@ function normalizeOrder(order){return {...order,id:String(order.id||'').toLowerC
 function event(order,type,description){order.history.push({at:new Date().toISOString(),actor:'Administrador',type,description})}
 const revision=z.number().int().nonnegative();
 const mutationSchema=z.discriminatedUnion('action',[
+ z.object({action:z.literal('field'),version:revision,field:z.enum(['customer','phone','recipient','recipientPhone','address','schedule','occasion','deliveryReference','deliveryNotes','flowerNotes','substitution','message','anonymous']),value:z.unknown()}).strict(),
  z.object({action:z.literal('status'),version:revision,status:z.string(),reason:z.string().trim().max(500).default('')}),
  require('./payment-domain').schema,
  z.object({action:z.literal('payment'),version:revision,confirmed:z.literal(true),reference:z.string().trim().min(4).max(160)}),
@@ -17,6 +18,17 @@ const mutationSchema=z.discriminatedUnion('action',[
 function applyMutation(original,input,options={}){
  const parsed=mutationSchema.safeParse(input);if(!parsed.success)throw new OrderError('Confira os dados, a confirmação e a versão do pedido.',400);
  const data=parsed.data,order=normalizeOrder(structuredClone(original));
+ if(data.action==='field'){
+  const keys=['customer','phone','recipient','recipientPhone','pickupLocationId','neighborhood','deliveryReference','fulfillment','city','address','date','period','scheduleMode','timeSlot','message','anonymous','occasion','flowerNotes','deliveryNotes','substitution'];
+  let patch={[data.field]:data.value};
+  if(['schedule','address'].includes(data.field)){
+   const group=data.field==='schedule'?z.object({date:z.string(),period:z.string(),scheduleMode:z.string(),timeSlot:z.string()}):z.object({city:z.string(),neighborhood:z.string(),address:z.string()});
+   const result=group.strict().safeParse(data.value);if(!result.success)throw new OrderError('Confira os campos desta informação.',400);patch=result.data;
+  }
+  const details=detailsSchema.safeParse({...Object.fromEntries(keys.filter(k=>original[k]!==undefined).map(k=>[k,original[k]])),...patch});
+  if(!details.success)throw new OrderError(details.error.issues[0].message,400);
+  data.action='details';data.details=details.data;
+ }
  if(data.action==='settlement'){const previous=require('./payment-domain').replay(order,data);if(previous)return previous;}
  if(data.version!==order.version)throw new OrderError('Este pedido foi alterado em outra tela. Atualize os dados antes de continuar.');
  if(flow.closed(order))throw new OrderError('Este pedido já foi encerrado e não pode ser alterado.');
@@ -46,8 +58,10 @@ function applyMutation(original,input,options={}){
    if(data.details.date!==order.date&&data.details.date<today())throw new OrderError('O novo agendamento não pode ser no passado.',400);
    if(data.details.timeSlot&&(data.details.date!==order.date||data.details.timeSlot!==order.timeSlot)&&orderOptions.expired(data.details.date,data.details.timeSlot))throw new OrderError('A nova faixa de horário já terminou.',400);
    const changes=Object.keys(data.details).filter(key=>data.details[key]!==order[key]);
+   if(!changes.length)return order;
    const auditChanges=changes.map(field=>({field,before:order[field]??null,after:data.details[field]??null}));
    Object.assign(order,data.details);
+   if(order.deliveryAddress&&changes.some(key=>['city','address','neighborhood'].includes(key))){if(order.deliveryReference===undefined)order.deliveryReference=order.deliveryAddress.reference||'';auditChanges.push({field:'deliveryAddress',before:structuredClone(order.deliveryAddress),after:null});delete order.deliveryAddress;}
    const cardChanged=changes.some(key=>['message','anonymous','recipient','customer'].includes(key));
    const flowersChanged=changes.some(key=>['flowerNotes','substitution'].includes(key));
    if(cardChanged)order.checklist.card=false;
@@ -61,7 +75,12 @@ function applyMutation(original,input,options={}){
    Object.assign(order,{checklist:data.checklist,florist:data.florist,driver:data.driver,internalNote:data.internalNote});
    event(order,'production','Checklist, responsáveis e observações internas atualizados.');order.history.at(-1).changes=productionChanges;break;
  }
- if(options.actor)for(const e of order.history.slice(original.history?.length||0))e.actor=options.actor.name;
+ for(const e of order.history.slice(original.history?.length||0)){
+  if(options.actor){e.actor=options.actor.name;e.actorId=options.actor.id||null;e.actorRole=options.actor.role||null;}
+  e.orderVersion=order.version+1;
+  if(e.type==='details'&&JSON.stringify(original.checklist)!==JSON.stringify(order.checklist))e.changes.push({field:'checklist',before:original.checklist??null,after:structuredClone(order.checklist)});
+  if(!e.changes){const ignored=new Set(['history','historyCount','version','updatedAt']);e.changes=Object.keys(order).filter(k=>!ignored.has(k)&&JSON.stringify(original[k])!==JSON.stringify(order[k])).map(field=>({field,before:original[field]??null,after:order[field]??null}));}
+ }
  order.version++;order.updatedAt=new Date().toISOString();return order;
 }
 module.exports={OrderError,normalizeOrder,applyMutation,nextStatus};

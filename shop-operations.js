@@ -21,7 +21,7 @@ function defaults(tenant){return {revision:0,categories:require('./shop-categori
 function state(tenant){const base=defaults(tenant),saved=structuredClone(tenant.profile.operations||{});return {...base,...saved,schedule:{...base.schedule,...saved.schedule}};}
 function data(schema,value){const result=schema.safeParse(value);if(!result.success)throw new OrderError(result.error.issues[0]?.message||'Confira os campos.',400);return result.data;}
 function wantedIds(tenant,input,plan){const s=state(tenant);if(['workshop.save','workshop.start'].includes(input.action))return [input.data?.orderId].filter(Boolean);if(input.action==='route.create')return plan?.stops.map(p=>p.orderId)||[];if(input.action.startsWith('route.'))return s.routes.find(r=>r.id===input.data?.id)?.stops.map(p=>p.orderId)||[];return [];}
-function applyOperations(original,input,{orders=[],plan=null,routingConfigured=false,domainProof=null,printerProof=null,actor,now=new Date()}={}){
+function applyOperations(original,input,{orders=[],plan=null,routingConfigured=false,domainProof=null,printerProof=null,actor,actorIdentity,now=new Date()}={}){
  const request=data(z.object({action:z.string().max(60),version:z.number().int().nonnegative(),data:z.record(z.string(),z.unknown())}).strict(),input),tenant=structuredClone(original),s=state(tenant),changed=[],productEvents=[];
  if(request.version!==s.revision)throw new OrderError('Esta configuração mudou em outra tela. Atualize os dados antes de salvar.',409);
  const d=request.data,stamp=now.toISOString(),findOrder=key=>{const order=orders.find(o=>o.id===key);if(!order)throw new OrderError('Pedido não encontrado nesta floricultura.',404);return order;};
@@ -55,6 +55,7 @@ function applyOperations(original,input,{orders=[],plan=null,routingConfigured=f
  r.history.push({at:stamp,text:{'route.cancel':'Rota cancelada antes do despacho.','route.dispatch':'Pedidos despachados para entrega.','route.deliver':'Entrega da parada confirmada.'}[request.action]});break;}
  default:throw new OrderError('Operação inválida.',400);
  }
+ for(const next of changed){const previous=orders.find(o=>o.id===next.id);for(const event of next.history.slice(previous?.history?.length||0)){event.actor=actorIdentity?.name||actor||'Equipe';event.actorId=actorIdentity?.id||null;event.actorRole=actorIdentity?.role||null;}const event=next.history.at(-1);if(event&&previous){const fields=['florist','driver','driverId','routeId','workshopStartedAt'];for(const field of fields)if(JSON.stringify(previous[field])!==JSON.stringify(next[field])&&!event.changes?.some(c=>c.field===field))(event.changes??=[]).push({field,before:previous[field]??null,after:next[field]??null});}}
  s.revision++;s.updatedAt=stamp;tenant.profile.operations=s;return {tenant,orders:changed,productEvents};
 }
 module.exports={state,defaults,applyOperations,wantedIds,scheduleSchema,coord,fiscalSchema,fiscalDefaults};

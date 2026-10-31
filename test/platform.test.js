@@ -48,13 +48,14 @@ test('Plataforma: login, lojas isoladas, administração principal, nomes de IA 
 });
 test('Senhas usam hash com sal e não são retornadas no cadastro ou sessão',async()=>{const {hashPassword,verifyPassword}=require('../platform-auth');const a=await hashPassword('uma-senha-bem-forte'),b=await hashPassword('uma-senha-bem-forte');assert.notEqual(a,b);assert.equal(await verifyPassword('uma-senha-bem-forte',a),true);assert.equal(await verifyPassword('incorreta',a),false);assert.doesNotMatch(a,/uma-senha-bem-forte/);});
 test('IA recebe identidade apenas da loja configurada e não usa os dados fixos da loja original',async()=>{let request;const ai=require('../florzinha').createFlorzinha({key:()=> 'fake',identity:async()=>({assistantName:'Violeta',storeName:'Floricultura Flores da Bia',city:'Curitiba',pickupAddress:'Rua das Flores, 10'}),fetcher:async(url,options)=>{request=JSON.parse(options.body);return {ok:true,json:async()=>({output:[{content:[{type:'output_text',text:'Olá, posso ajudar?'}]}]})}}});await ai.suggest([{body:'Olá'}]);assert.match(request.instructions,/Violeta/);assert.match(request.instructions,/Floricultura Flores da Bia/);assert.match(request.instructions,/Curitiba/);assert.doesNotMatch(request.instructions,/Florzinha|Emoções Flores|Havana|Mauá/);});
-test('Consultas SQL de leitura e inclusão sempre incluem o identificador da loja',async()=>{
+test('Consultas SQL de leitura e inclusão sempre incluem o identificador da loja',async(t)=>{
  const {createCustomerStore}=require('../customer-store'),{createOrderStore}=require('../order-store');const tenant='a72bc6dc-d34c-4ff8-8a53-7e3a8ebed527',calls=[];
  const pool={request(){const inputs={};return {input(name,type,value){inputs[name]=value;return this;},async query(text){calls.push({text,inputs});return {recordset:[]};}}}};
+ const sql=require('mssql');t.mock.method(sql,'Transaction',function(){return {async begin(){},async commit(){},async rollback(){}};});t.mock.method(sql,'Request',function(){return pool.request();});
  const customers=createCustomerStore({demo:false,multi:true,getPool:()=>pool,getTenant:()=>tenant}),orders=createOrderStore({demo:false,multi:true,getPool:()=>pool,getTenant:()=>tenant});
  await customers.search('Ana');await customers.get('db0bc95a-d211-4cbe-9d5c-2b1c623ae338');await customers.insert({name:'Cliente SQL',phone:'11981112222'});await orders.list();await orders.insert({id:'4619025d-4af4-4d54-8d44-dfa137133b72',total:100,status:'Recebido'});
  for(const call of calls){assert.equal(call.inputs.tenantId,tenant);assert.match(call.text,/@tenantId/);if(call.text.startsWith('SELECT'))assert.match(call.text,/WHERE tenantId=@tenantId|AND tenantId=@tenantId/);}
- assert.match(calls[0].text,/tenantId=@tenantId AND \(.* OR /);assert.equal(calls.length,5);
+ assert.match(calls[0].text,/tenantId=@tenantId AND \(.* OR /);assert.equal(calls.length,6);
 });
 test('Recursos e anotações WhatsApp usam arquivos e serviços diferentes mesmo para o mesmo contato',async()=>{
  const fs=require('node:fs/promises'),os=require('node:os'),path=require('node:path'),express=require('express');const root=await fs.mkdtemp(path.join(os.tmpdir(),'tenant-whatsapp-')),paths=[];

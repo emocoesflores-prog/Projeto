@@ -12,6 +12,7 @@ async function migrate(){
   await pool.request().query(fs.readFileSync(path.join(__dirname,'../sql/multitenant.sql'),'utf8'));
   await pool.request().query(fs.readFileSync(path.join(__dirname,'../sql/product-events.sql'),'utf8'));
   await pool.request().query(fs.readFileSync(path.join(__dirname,'../sql/pdv-drafts.sql'),'utf8'));
+  await pool.request().query(fs.readFileSync(path.join(__dirname,'../sql/order-events.sql'),'utf8'));
   const after=await counts();
   if(String(before.ordersCount)!==String(after.ordersCount)||String(before.customersCount)!==String(after.customersCount))throw Error('A migração terminou, mas a contagem mudou durante a verificação. Confira possíveis gravações concorrentes antes de iniciar o servidor.');
   const checked=(await pool.request().query("SELECT OBJECT_ID(N'dbo.AppUsers',N'U') AS usersTable,OBJECT_ID(N'dbo.AppSessions',N'U') AS sessionsTable,COL_LENGTH(N'dbo.Orders',N'tenantId') AS ordersTenant,COL_LENGTH(N'dbo.Customers',N'tenantId') AS customersTenant,(SELECT COUNT(*) FROM dbo.Tenants WHERE id='00000000-0000-4000-8000-000000000001') AS originalStore,(SELECT COUNT(*) FROM dbo.Tenants WHERE id='00000000-0000-4000-8000-000000000002') AS platformCompany")).recordset[0];
