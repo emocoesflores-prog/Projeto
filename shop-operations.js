@@ -27,7 +27,7 @@ function applyOperations(original,input,{orders=[],plan=null,routingConfigured=f
  const d=request.data,stamp=now.toISOString(),findOrder=key=>{const order=orders.find(o=>o.id===key);if(!order)throw new OrderError('Pedido não encontrado nesta floricultura.',404);return order;};
  const upsert=(list,item)=>{const i=list.findIndex(x=>x.id===item.id);if(i>=0)list[i]=item;else{if(list.length>=500)throw new OrderError('Limite de 500 registros deste cadastro.',400);list.push(item);}};
  switch(request.action){
- case 'configuration.save':{if(d.module==='workshop'&&d.settings?.autoPrepare){const issue=require('./workshop-domain').printerGate(s.printers,printerProof,now);if(issue)throw new OrderError(issue,409);}require('./tenant-configuration').change(tenant,s,d);break;}
+ case 'configuration.save':{require('./tenant-configuration').change(tenant,s,d);break;}
  case 'domain.save':require('./tenant-configuration').domainChange(tenant,s,d);break;
  case 'domain.verify':{const config=require('./tenant-configuration').state(tenant);if(!domainProof||domainProof.hostname!==config.domain.hostname||domainProof.token!==config.domain.token)throw new OrderError('O domínio mudou. Verifique novamente.',409);config.domain.verifiedAt=stamp;s.configuration=config;break;}
  case 'product.save':productEvents.push(...require('./product-domain').save(tenant,s,d,{actor,now}));break;

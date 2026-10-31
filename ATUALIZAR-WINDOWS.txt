@@ -1,3 +1,19 @@
+VERSÃO 3.9 — RASCUNHOS DO PDV, ODF E LEITURA DOS PEDIDOS
+PDV salva vendas em rascunho ao digitar/sair. Retome pelo botão Rascunhos.
+ODF salva a antecedência e funciona sem impressora; impressoras cadastradas indisponíveis pausam a liberação.
+Lista menor, ficha à direita ampliada, textos maiores e cores distintas por status.
+NOVA TABELA SQL: pare o servidor e faça backup. Preserve .env, banco e pastas privadas.
+Atualize os arquivos. No SSMS, selecione o banco de SQL_DATABASE e execute sql/pdv-drafts.sql
+com uma conta autorizada. Conceda SELECT, INSERT e UPDATE em dbo.PdvDrafts ao usuário da aplicação.
+Não recrie o banco. Não há nova variável obrigatória de .env.
+Depois execute na pasta do projeto:
+  npm ci
+  npm run media:setup
+  npm audit
+  npm start
+Use Ctrl+F5 em todas as telas. Em demonstração, rascunhos desaparecem ao reiniciar o servidor.
+Leia RASCUNHOS-E-OFICINA-3.9.md para a atualização e o comportamento dos rascunhos.
+
 VERSÃO 3.8 — RECEBIMENTOS, PEDIDOS E FOTOS NA ODF
 PDV abre Confirmar recebimento: formas divididas, parcial, desconto autorizado e troco.
 Histórico registra usuário, data, valores e meios. Ative os meios desejados em Caixa.

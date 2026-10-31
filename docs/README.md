@@ -1,5 +1,15 @@
 # Prévia da central de pedidos
 
+## Rascunhos e leitura dos pedidos · versão 3.9
+
+Dados fictícios em demonstração. Consulte o [guia de atualização e nova tabela SQL](../RASCUNHOS-E-OFICINA-3.9.md).
+
+![Vendas salvas como rascunho por operador](rascunhos-pdv-3.9.png)
+
+![Preferência de liberação da Oficina salva com 120 minutos](oficina-configuracao-3.9.png)
+
+![Lista menor com mais espaço para o pedido selecionado](gestao-pedidos-3.9.png)
+
 ## Recebimentos e Oficina · versão 3.8
 
 As imagens usam dados fictícios em demonstração. Leia o [guia da atualização](../RECEBIMENTOS-E-VISUAL-3.8.md).

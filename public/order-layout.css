@@ -1,0 +1,43 @@
+/* A lista ocupa menos largura; a ficha recebe o espaço para leitura e trabalho. */
+@media(min-width:1000px){
+ :root[data-admin-theme] .dashboard.orders-mode .desk-workspace{grid-template-columns:minmax(400px,.76fr) minmax(0,1.24fr)!important}
+ .orders-mode .order-row{gap:10px;padding:12px;min-height:106px}
+ .orders-mode .order-row-name strong{font-size:16px!important;line-height:1.4}
+ .orders-mode .order-row-name small{font-size:13px}
+ .orders-mode .order-row-schedule{font-size:14px!important;line-height:1.5}
+ .orders-mode .order-row-meta{font-size:13px;gap:6px 9px}
+ .orders-mode .order-row-total{font-size:17px}
+ .orders-mode .order-row-side{width:148px;max-width:148px}
+ .orders-mode .order-row-content{min-width:0}
+ .orders-mode .inspector-field p{font-size:16px;line-height:1.55}
+ .orders-mode .inspector-field small{font-size:13px}
+ .orders-mode .inspector-heading h2{font-size:18px!important}
+ .orders-mode .inspector-heading small{font-size:13px}
+ :root[data-admin-theme] .dashboard.orders-mode .inspector-tab{font-size:14px;min-height:38px}
+}
+/* Cada etapa tem sua própria combinação; os nomes continuam sempre visíveis. */
+.dashboard.orders-mode .stage-payment{--stage-bg:#fff3aa;--stage-ink:#675000;--stage-border:#b38b00}
+.dashboard.orders-mode .stage-scheduled{--stage-bg:#dfebff;--stage-ink:#164c9a;--stage-border:#3478da}
+.dashboard.orders-mode .stage-queue{--stage-bg:#f0dfcb;--stage-ink:#683c16;--stage-border:#a9713e}
+.dashboard.orders-mode .stage-production{--stage-bg:#ece0ff;--stage-ink:#60349c;--stage-border:#8853c9}
+.dashboard.orders-mode .stage-ready{--stage-bg:#e7eebc;--stage-ink:#42520b;--stage-border:#7b9225}
+.dashboard.orders-mode .stage-pickup{--stage-bg:#f9def1;--stage-ink:#8b1c6a;--stage-border:#bf4b9f}
+.dashboard.orders-mode .stage-route{--stage-bg:#ffe0c5;--stage-ink:#8a3b0a;--stage-border:#db6b1d}
+.dashboard.orders-mode .stage-delivered{--stage-bg:#ccf0e8;--stage-ink:#075f59;--stage-border:#258a80}
+.dashboard.orders-mode .stage-finished,.dashboard.orders-mode .stage-history{--stage-bg:#e6e7ea;--stage-ink:#434953;--stage-border:#7a818c}
+.dashboard.orders-mode .stage-cancelled{--stage-bg:#ffdee2;--stage-ink:#9d1e33;--stage-border:#d4445c}
+:root[data-admin-theme=dark] .dashboard.orders-mode .stage-payment{--stage-bg:#403810;--stage-ink:#ffed8c;--stage-border:#b9a139}
+:root[data-admin-theme=dark] .dashboard.orders-mode .stage-scheduled{--stage-bg:#152c50;--stage-ink:#bdd7ff;--stage-border:#5e8fda}
+:root[data-admin-theme=dark] .dashboard.orders-mode .stage-queue{--stage-bg:#402d20;--stage-ink:#edc59d;--stage-border:#ae8259}
+:root[data-admin-theme=dark] .dashboard.orders-mode .stage-production{--stage-bg:#332044;--stage-ink:#e0c0ff;--stage-border:#a67acd}
+:root[data-admin-theme=dark] .dashboard.orders-mode .stage-ready{--stage-bg:#2d3617;--stage-ink:#d5e89e;--stage-border:#879d50}
+:root[data-admin-theme=dark] .dashboard.orders-mode .stage-pickup{--stage-bg:#431d38;--stage-ink:#ffc0e9;--stage-border:#bf6a9e}
+:root[data-admin-theme=dark] .dashboard.orders-mode .stage-route{--stage-bg:#472811;--stage-ink:#ffd0a4;--stage-border:#c98248}
+:root[data-admin-theme=dark] .dashboard.orders-mode .stage-delivered{--stage-bg:#123a34;--stage-ink:#a3eee0;--stage-border:#4ba497}
+:root[data-admin-theme=dark] .dashboard.orders-mode .stage-finished,:root[data-admin-theme=dark] .dashboard.orders-mode .stage-history{--stage-bg:#2d3036;--stage-ink:#d3d7df;--stage-border:#858d9b}
+:root[data-admin-theme=dark] .dashboard.orders-mode .stage-cancelled{--stage-bg:#4c1d27;--stage-ink:#ffc0cd;--stage-border:#ce7287}
+:root[data-admin-theme] .dashboard.orders-mode .order-status{font-size:13px!important;padding:7px 10px!important}
+
+@media(min-width:1000px){:root[data-admin-theme] .dashboard.orders-mode .inspector-field p{font-size:16px!important;line-height:1.55}:root[data-admin-theme] .dashboard.orders-mode .inspector-field small{font-size:13px!important}:root[data-admin-theme] .dashboard.orders-mode .inspector-tab{font-size:14px!important}.orders-mode .order-row-modality{font-size:13px}}
+
+.orders-mode .desk-filters>label:not(.desk-search) select{max-width:195px}
