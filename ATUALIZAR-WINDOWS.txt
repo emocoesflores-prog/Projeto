@@ -1,3 +1,17 @@
+VERSÃO 3.8 — RECEBIMENTOS, PEDIDOS E FOTOS NA ODF
+PDV abre Confirmar recebimento: formas divididas, parcial, desconto autorizado e troco.
+Histórico registra usuário, data, valores e meios. Ative os meios desejados em Caixa.
+Correção da linha duplicada, recuperação de envio e concluídos sempre ao fim da lista.
+Cabeçalhos padronizados e ícones com texto; miniaturas com ampliação na Oficina de Flores.
+Preserve .env, banco e todas as pastas privadas. Pare o servidor, atualize o código e execute:
+  npm ci
+  npm run media:setup
+  npm audit
+  npm start
+Use Ctrl+F5 em todas as telas. Não há nova migração SQL nem variável de .env desde a 3.7.
+Inclui atualização de dependências de compactação do WhatsApp; não use audit fix --force.
+Leia RECEBIMENTOS-E-VISUAL-3.8.md para os fluxos financeiros, validação e limites.
+
 VERSÃO 3.7 — PEDIDOS AO VIVO E PAINEL DE RETIRADAS
 Voltar respeita a origem dos atalhos; PDV mostra o texto Voltar.
 Gestão, ODF, GDE e retiradas compartilham as etapas e recebem eventos do servidor.

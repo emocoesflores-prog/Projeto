@@ -1,5 +1,17 @@
 # Prévia da central de pedidos
 
+## Recebimentos e Oficina · versão 3.8
+
+As imagens usam dados fictícios em demonstração. Leia o [guia da atualização](../RECEBIMENTOS-E-VISUAL-3.8.md).
+
+![Confirmação de recebimentos com desconto e troco](confirmar-recebimento-3.8.png)
+
+![Oficina com miniaturas por produto](odf-miniaturas-3.8.png)
+
+![Consulta da imagem ampliada na oficina](odf-foto-ampliada-3.8.png)
+
+## Versões anteriores
+
 A imagem `gestao-pedidos.png` foi capturada no Chromium com pedidos fictícios criados somente para validação em modo demonstração. Nenhum desses pedidos integra o banco da floricultura.
 
 ![Central de pedidos com lista e detalhe lado a lado](gestao-pedidos.png)

@@ -1,3 +1,5 @@
+> **Versão 3.8:** recebimentos divididos/parciais com histórico, descontos e troco; pedidos sem duplicação, concluídos ao fim, cabeçalhos e ícones unificados, fotos ampliáveis na ODF: [guia da atualização](RECEBIMENTOS-E-VISUAL-3.8.md).
+
 > **Versão 3.7:** pedidos ao vivo, retorno à tela de origem, etapas compartilhadas, Venda Loja com conclusão após recebimento e Painel de Pedidos exclusivo para retiradas: [guia da atualização](PEDIDOS-AO-VIVO-3.7.md).
 
 > **Versão 3.6.1:** correção dos dois alertas altos na cadeia de autenticação Azure do driver SQL Server; auditoria sem vulnerabilidades conhecidas: [guia da correção](SEGURANCA-3.6.1.md).
@@ -81,15 +83,15 @@ O botão **Novo pedido** abre uma tela de PDV com catálogo à esquerda e resumo
 
 Os três primeiros campos do resumo são:
 
-1. **Cliente:** busca por nome ou WhatsApp no cadastro do banco, com navegação por teclado. A opção **Novo cliente** abre cadastro separado, aproveitando o texto digitado. Somente nome e WhatsApp são obrigatórios. Venda na loja continua aceitando consumidor final, desde que a busca esteja limpa.
-2. **Modalidade:** Venda na Loja (padrão), Retirada, Entrega.
+1. **Cliente:** busca por nome ou WhatsApp no cadastro do banco, com navegação por teclado. A opção **Novo cliente** abre cadastro separado, aproveitando o texto digitado. Somente nome e WhatsApp são obrigatórios. Venda Loja continua aceitando consumidor final, desde que a busca esteja limpa.
+2. **Modalidade:** Venda Loja (padrão), Retirada, Entrega.
 3. **Atendimento:** Pedido para agora (padrão), Realizar agendamento.
 
 Cliente é quem compra. O destinatário do presente fica em outro campo: selecionar o comprador não preenche automaticamente o endereço nem o nome de quem recebe. Retirada e entrega exigem selecionar um cliente cadastrado no PDV e informar destinatário; entrega exige endereço e cidade atendida.
 
 **Pedido para agora** não reserva hora e recebe data/período do servidor no fuso de São Paulo. **Realizar agendamento** abre uma janela para escolher dia e faixa; Cancelar/fechar preserva a escolha anterior e a ação “É um pedido para agora?” remove o agendamento. Sem regras próprias, o seletor oferece os próximos 90 dias e as faixas iniciais 09:10–10:50, 10:50–12:30, 13:40–15:20, 15:20–17:00 e 17:00–18:40. Em **Cadastros → Agendamentos**, cada loja pode ativar dias, datas bloqueadas, faixas, antecedência mínima/máxima e capacidade por intervalo. Site, PDV e reagendamento conferem essas regras no servidor; faixas lotadas ficam indisponíveis. A preparação automática da ODF tem configuração separada. Leia [o guia da versão 3.6](ODF-E-AGENDAMENTOS-3.6.md).
 
-Venda na loja e retirada não cobram frete. Entrega exige endereço e cidade atendida, cobrando a taxa configurada. Ocasião, mensagem, substituição e cuidados com o presente ficam nos campos expansíveis. O botão **Registrar pedido** cria um pedido aguardando pagamento, sem cobrar ou confirmar recebimento. O rascunho fica somente em memória; fechar pede confirmação quando há dados, e um novo PDV começa com os padrões iniciais. Não há controle financeiro de caixa, leitor de código de barras, suspensão de vendas, descontos nem produtos personalizados nesta versão.
+Venda na loja e retirada não cobram frete. Entrega exige endereço e cidade atendida, cobrando a taxa configurada. Ocasião, mensagem, substituição e cuidados com o presente ficam nos campos expansíveis. O botão **Registrar pedido** salva a venda e abre **Confirmar recebimento**, com registros divididos/parciais, desconto autorizado e troco em dinheiro. Confirmar exige a conferência da equipe; fechar mantém o pedido aguardando pagamento. O histórico preserva valores, formas, data/hora e usuário. O Caixa contabiliza cada recebimento na respectiva data, excluindo troco. Venda Loja é concluída após a quitação; retirada e entrega seguem o fluxo de produção. Os rascunhos ficam somente em memória. Leia [o guia da versão 3.8](RECEBIMENTOS-E-VISUAL-3.8.md) para configurar os meios, entender descontos, reenvios e atualização.
 
 ## Cadastro de clientes
 

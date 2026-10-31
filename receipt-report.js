@@ -1,0 +1,3 @@
+const model=require('./public/payment-model'),{localDate}=require('./public/order-options');
+function entries(orders,from,to){return orders.flatMap(o=>model.receipts(o).filter(r=>r.recordedAt&&new Date(r.recordedAt)>=from&&new Date(r.recordedAt)<to).map(r=>({id:r.id,type:'income',amount:r.amount,tendered:r.tendered,change:r.change||0,date:localDate(new Date(r.recordedAt)),method:r.method,methodName:r.methodName,category:'Recebimento de pedido',description:o.customer+' · '+o.id.slice(0,8),orderId:o.id,reference:r.reference,actor:r.actor?.name||'Administrador',cancelled:o.status==='Cancelado'})));}
+module.exports={entries};
