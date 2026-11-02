@@ -9,7 +9,7 @@ function event(order,type,description){order.history.push({at:new Date().toISOSt
 const revision=z.number().int().nonnegative();
 const mutationSchema=z.discriminatedUnion('action',[
  require('./order-selection').schema,
- z.object({action:z.literal('field'),version:revision,field:z.enum(['customer','phone','recipient','recipientPhone','address','schedule','occasion','deliveryReference','deliveryNotes','flowerNotes','substitution','message','anonymous']),value:z.unknown()}).strict(),
+ z.object({action:z.literal('field'),version:revision,field:z.enum(['customer','phone','recipient','recipientPhone','recipientContact','address','schedule','occasion','deliveryReference','deliveryNotes','flowerNotes','substitution','message','anonymous']),value:z.unknown()}).strict(),
  z.object({action:z.literal('status'),version:revision,status:z.string(),reason:z.string().trim().max(500).default('')}),
  require('./payment-domain').schema,
  z.object({action:z.literal('payment'),version:revision,confirmed:z.literal(true),reference:z.string().trim().min(4).max(160)}),
@@ -42,13 +42,12 @@ function applyMutation(original,input,options={}){
  }
 
  if(data.action==='field'){
-  const keys=['customer','phone','recipient','recipientPhone','pickupLocationId','neighborhood','deliveryReference','fulfillment','city','address','date','period','scheduleMode','timeSlot','message','anonymous','occasion','flowerNotes','deliveryNotes','substitution'];
   let patch={[data.field]:data.value};
-  if(['schedule','address'].includes(data.field)){
-   const group=data.field==='schedule'?z.object({date:z.string(),period:z.string(),scheduleMode:z.string(),timeSlot:z.string()}):z.object({city:z.string(),neighborhood:z.string(),address:z.string()});
+  if(['schedule','address','recipientContact'].includes(data.field)){
+   const group=data.field==='recipientContact'?z.object({recipient:z.string(),recipientPhone:z.string()}):data.field==='schedule'?z.object({date:z.string(),period:z.string(),scheduleMode:z.string(),timeSlot:z.string()}):z.object({city:z.string(),neighborhood:z.string(),address:z.string()});
    const result=group.strict().safeParse(data.value);if(!result.success)throw new OrderError('Confira os campos desta informação.',400);patch=result.data;
   }
-  const details=detailsSchema.safeParse({...Object.fromEntries(keys.filter(k=>original[k]!==undefined).map(k=>[k,original[k]])),...patch});
+  const details=require('./validation').fieldDetails(order,patch);
   if(!details.success)throw new OrderError(details.error.issues[0].message,400);
   data.action='details';data.details=details.data;
  }
@@ -71,15 +70,16 @@ function applyMutation(original,input,options={}){
    if(order.paymentStatus!=='paid')throw new OrderError('Registre a confirmação do recebimento antes de iniciar a produção.',400);
    if(data.status!==nextStatus(order))throw new OrderError('Etapa inválida para este pedido.',400);
    if(data.status===flow.ready(order)&&(!order.checklist.arrangement||!order.checklist.packaging||(order.message&&!order.checklist.card)))throw new OrderError('Confira arranjo, embalagem e cartão antes de marcar como pronto.');
+   if(data.status==='Saiu para entrega'&&!flow.hasDestination(order))throw new OrderError('Selecione ou cadastre um endereço completo antes de despachar a entrega.',400);
    if(data.status==='Saiu para entrega'&&!order.driver)throw new OrderError('Informe o entregador antes de despachar.');
    if(data.status==='Em preparação')order.workshopStartedAt=new Date().toISOString();
    order.status=data.status;if(data.status==='Concluído')order.completedAt=new Date().toISOString();if(data.status==='Entregue')order.deliveredAt=new Date().toISOString();event(order,'status',`Etapa alterada para ${data.status}.`);break;
   case 'details':{
    if(['Saiu para entrega','Pronto aguardando retirada'].includes(order.status))throw new OrderError('Os dados de entrega não podem mudar após a expedição.');
    if(data.details.pickupLocationId&&data.details.pickupLocationId!==order.pickupLocationId)throw new OrderError('O local de retirada deste pedido está preservado. Crie outro pedido para alterar a unidade.');
-   if(data.details.fulfillment!==order.fulfillment)throw new OrderError('A modalidade não pode ser alterada: crie outro pedido para preservar o frete original.');
-   if(data.details.date!==order.date&&data.details.date<today())throw new OrderError('O novo agendamento não pode ser no passado.',400);
-   if(data.details.timeSlot&&(data.details.date!==order.date||data.details.timeSlot!==order.timeSlot)&&orderOptions.expired(data.details.date,data.details.timeSlot))throw new OrderError('A nova faixa de horário já terminou.',400);
+   if(data.details.fulfillment!==undefined&&data.details.fulfillment!==order.fulfillment)throw new OrderError('A modalidade não pode ser alterada: crie outro pedido para preservar o frete original.');
+   if(data.details.date!==undefined&&data.details.date!==order.date&&data.details.date<today())throw new OrderError('O novo agendamento não pode ser no passado.',400);
+   if(data.details.timeSlot&&(data.details.date!==order.date||data.details.timeSlot!==order.timeSlot)&&orderOptions.expired(data.details.date||order.date,data.details.timeSlot))throw new OrderError('A nova faixa de horário já terminou.',400);
    const changes=Object.keys(data.details).filter(key=>data.details[key]!==order[key]);
    const associated=Object.keys(selectionPatch).filter(key=>JSON.stringify(order[key])!==JSON.stringify(selectionPatch[key]));
    if(!changes.length&&!associated.length)return order;
