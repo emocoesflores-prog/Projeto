@@ -1,3 +1,5 @@
+> **Versão 3.16:** novas telas de ODP, PDV, Atendimento e Entregas; preço por venda com motivo, troco, equipe simultânea, links individuais por floricultura/entregador e revisão auditada de itens. **Nova migração SQL:** [guia de atualização](OPERACAO-MULTICANAL-E-ENTREGAS-3.16.md).
+
 > **Versão 3.15:** parcial no ODP com tag laranja, categorias em três níveis, complementos por produto com opções do catálogo, envio privado de fotos e correção auditada de recebimentos. **Novas tabelas de fotos:** [guia de atualização](COMPLEMENTOS-FOTOS-E-PAGAMENTOS-3.15.md).
 
 > **Versão 3.14:** troca de modalidade com conferência do frete, período automático, conversa no Atendimento interno, endereço/destinatário atualizados juntos e aba Produtos: [guia da atualização](MODALIDADE-E-ATENDIMENTO-3.14.md).

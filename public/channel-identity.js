@@ -13,5 +13,5 @@ window.ChannelIdentity=(()=>{
  function apply(target,provider){if(!names[provider])provider='email';target.dataset.channelBrand=provider;target.classList.add('attendance-channel-badge');target.setAttribute('aria-label','Canal: '+names[provider]);const label=document.createElement('span');label.textContent=names[provider];target.replaceChildren(icon(provider),label);return target;}
  function badge(provider){return apply(document.createElement('span'),provider);}
  function control(target,provider){target.dataset.channelBrand=provider;target.querySelector('.channel-brand-icon')?.remove();target.prepend(icon(provider));}
- return {badge,apply,control};
+ return {icon,badge,apply,control};
 })();

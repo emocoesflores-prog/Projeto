@@ -47,7 +47,7 @@ function adjust(tenant,input,meta={}){
 }
 function sell(tenant,order,meta={}){
  const list=structuredClone(tenant.profile.catalog||require('./catalog')),events=[],custom=require('./product-customization'),audience=order.source==='site'?'site':'system';
- const priced=custom.priceItems(order.items.map(custom.selection),list,{audience});
+ const priced=custom.priceItems(order.items.map(custom.selection),list,{audience,allowPriceOverride:true});
  for(let i=0;i<order.items.length;i++){const old=order.items[i],next=priced.items[i];if(next.unitPrice!==old.unitPrice||(old.configurationStamp&&old.configurationStamp!==next.configurationStamp))throw new OrderError('O produto, complemento ou preço mudou. Atualize o pedido.',409);}
  for(const [id,q]of priced.stock){const raw=list.find(p=>p.id===id),p=normalize(raw);if(p.inventory.tracked){const before=p.inventory.quantity;if(before<q)throw new OrderError('Estoque insuficiente para '+p.name+'. Atualize o pedido.',409);p.inventory.quantity-=q;events.push(event(id,'stock.sale',before,p.inventory.quantity,{...meta,quantity:q,unitCost:p.cost,orderId:order.id,reason:'Reserva / baixa ao registrar pedido'}));Object.assign(raw,p);}}
  tenant.profile.catalog=list;return events;

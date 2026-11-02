@@ -9,6 +9,7 @@ function event(order,type,description){order.history.push({at:new Date().toISOSt
 const revision=z.number().int().nonnegative();
 const mutationSchema=z.discriminatedUnion('action',[
  require('./order-selection').schema,
+ z.object({action:z.literal('priority'),version:revision,value:z.boolean()}).strict(),
  require('./order-fulfillment').schema,
  z.object({action:z.literal('field'),version:revision,field:z.enum(['customer','phone','recipient','recipientPhone','recipientContact','address','schedule','occasion','deliveryReference','deliveryNotes','flowerNotes','substitution','message','anonymous']),value:z.unknown()}).strict(),
  z.object({action:z.literal('status'),version:revision,status:z.string(),reason:z.string().trim().max(500).default('')}),
@@ -65,6 +66,7 @@ function applyMutation(original,input,options={}){
  if(flow.closed(order)&&data.action!=='voidReceipt'&&!correctingClosed)throw new OrderError('Este pedido já foi encerrado e não pode ser alterado.');
  if(order.status==='Entregue'&&data.action!=='voidReceipt'&&!correctingClosed&&!(data.action==='status'&&data.status==='Concluído'))throw new OrderError('A entrega já foi confirmada. Finalize o pedido como Concluído.');
  switch(data.action){
+  case 'priority':order.priority=data.value;event(order,'priority',data.value?'Prioridade de atendimento e entrega ativada.':'Prioridade removida.');break;
   case 'voidReceipt':require('./payment-domain').voidReceipt(order,data,options);break;
   case 'settlement':require('./payment-domain').apply(order,data,options);break;
   case 'payment':
@@ -83,7 +85,7 @@ function applyMutation(original,input,options={}){
    if(data.status==='Saiu para entrega'&&!flow.hasDestination(order))throw new OrderError('Selecione ou cadastre um endereço completo antes de despachar a entrega.',400);
    if(data.status==='Saiu para entrega'&&!order.driver)throw new OrderError('Informe o entregador antes de despachar.');
    if(data.status==='Em preparação')order.workshopStartedAt=new Date().toISOString();
-   order.status=data.status;if(data.status==='Concluído')order.completedAt=new Date().toISOString();if(data.status==='Entregue')order.deliveredAt=new Date().toISOString();event(order,'status',`Etapa alterada para ${data.status}.`);break;
+   order.status=data.status;if(data.status===flow.ready(order))order.requiresRecheck=false;if(data.status==='Concluído')order.completedAt=new Date().toISOString();if(data.status==='Entregue')order.deliveredAt=new Date().toISOString();event(order,'status',`Etapa alterada para ${data.status}.`);break;
   case 'details':{
    if(order.status==='Saiu para entrega'||(order.status==='Pronto aguardando retirada'&&!fulfillmentChange))throw new OrderError('Os dados de entrega não podem mudar após a expedição.');
    if(!fulfillmentChange&&data.details.pickupLocationId&&data.details.pickupLocationId!==order.pickupLocationId)throw new OrderError('O local de retirada deste pedido está preservado. Crie outro pedido para alterar a unidade.');

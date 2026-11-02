@@ -1,3 +1,19 @@
+# Operação 3.16
+
+Capturas com dados fictícios e canais simulados. Veja o [guia de instalação e utilização](../OPERACAO-MULTICANAL-E-ENTREGAS-3.16.md).
+
+![PDV com pagamento em dinheiro e troco](pdv-3.16.png)
+
+![Atendimento com responsável e nota interna](atendimento-3.16.png)
+
+![Oficina de Pedidos](odp-3.16.png)
+
+![Portal móvel individual do entregador](entregador-3.16.png)
+
+No ambiente da captura de entregas, o mapa externo estava indisponível; a tela informa a falha e mantém a revisão de coordenadas e navegação.
+
+![Planejamento de entregas](entregas-3.16.png)
+
 # Prévia da central de pedidos
 
 ## Painel e filtros · versão 3.10

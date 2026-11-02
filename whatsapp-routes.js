@@ -14,7 +14,7 @@ function whatsappRoutes(service, desk = require('./whatsapp-desk-store').createD
   router.get('/status', async (req,res,next) => { try { const state = service.refreshStatus ? await service.refreshStatus() : service.status(); res.json({ ...state, aiConfigured: await florzinha.configured() }); } catch(e) { next(e); } });
   router.post('/connect', async (req,res,next) => { try { await service.connect(); res.status(202).json(service.status()); } catch(e) { next(e); } });
   router.post('/disconnect', async (req,res,next) => { try { await service.disconnect(); res.json(service.status()); } catch(e) { next(e); } });
-  router.get('/chats', async (req,res,next) => { try { const metadata = await desk.all(); res.json((await service.chats()).map(chat => ({ ...chat, desk: metadata[chat.id] || {} }))); } catch(e) { next(e); } });
+  router.get('/chats', async (req,res,next) => { try { const metadata = await desk.all(); const chats=(await service.chats()).map(chat=>({...chat,desk:metadata[chat.id]||{}}));res.json(req.decorateChats?await req.decorateChats(chats):chats); } catch(e) { next(e); } });
   router.post('/new-chat', async (req,res,next) => {
     const parsed = z.object({phone:z.string().min(8).max(30)}).safeParse(req.body);
     if (!parsed.success) return res.status(400).json({error:'Informe um WhatsApp válido.'});
@@ -56,7 +56,7 @@ function whatsappRoutes(service, desk = require('./whatsapp-desk-store').createD
   router.post('/chats/:id/suggestion', async (req,res,next) => {
     try {
       const metadata = await desk.all();
-      if (!metadata[req.params.id]?.aiEnabled) return res.status(409).json({ error: 'Habilite a assistente nesta conversa antes de gerar uma sugestão.' });
+      if (!(req.conversation||metadata[req.params.id])?.aiEnabled) return res.status(409).json({ error: 'Habilite a assistente nesta conversa antes de gerar uma sugestão.' });
       res.json({ text: await florzinha.suggest(await service.messages(req.params.id)) });
     } catch(e) { next(e); }
   });

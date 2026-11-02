@@ -10,7 +10,7 @@ function createTenantResources({root=__dirname,makeService=require('./whatsapp-s
     const service=makeService({dataPath:path.join(base,'.wwebjs_auth')});
     const desk=require('./whatsapp-desk-store').createDeskStore(path.join(base,'.whatsapp-desk.json'));
     const ai=require('./florzinha').createFlorzinha({identity:()=>getIdentity(id),credentials:()=>require('./shop-integrations').credentials(id,'assistant')});
-    return {service,router:require('./whatsapp-routes')(service,desk,ai)};
+    return {service,desk,router:require('./whatsapp-routes')(service,desk,ai)};
    })().catch(e=>{resources.delete(id);throw e;}));
    return resources.get(id);
   },

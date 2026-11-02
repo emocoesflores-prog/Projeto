@@ -6,7 +6,7 @@ const dataSchema=z.object({
  address:z.object({id:z.uuid(),version:z.number().int().nonnegative()}).strict().nullable(),
  timing:z.object({mode:z.enum(['now','scheduled']),date:text(10),slot:text(40)}).strict(),
  channel:z.enum(['pdv','manual','whatsapp','instagram','facebook','gmail','outlook','imap']),
- values:z.object({fulfillment:z.enum(['store','pickup','delivery']),pickupLocationId:text(80),paymentMethod:text(50),occasion:text(60),deliveryNotes:text(500),flowerNotes:text(1000),substitution:z.enum(['contact','allowed']),message:text(500),anonymous:z.boolean(),couponCode:text(30)}).strict()
+ values:z.object({fulfillment:z.enum(['store','pickup','delivery']),pickupLocationId:text(80),paymentMethod:text(50),occasion:text(60),deliveryNotes:text(500),flowerNotes:text(1000),substitution:z.enum(['contact','allowed']),message:text(500),anonymous:z.boolean(),couponCode:text(30),cashTendered:text(40).optional()}).strict()
 }).strict();
 const saveSchema=z.object({version:z.number().int().nonnegative(),data:dataSchema}).strict();
 const versionSchema=z.object({version:z.number().int().nonnegative()}).strict();

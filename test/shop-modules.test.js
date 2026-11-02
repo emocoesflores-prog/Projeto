@@ -24,7 +24,7 @@ test('rotas conferem pertencimento, pagamento, versões, período e dupla atribu
  let result=apply(a,'route.create',{planId:plan.planId,driverId:driver.id,name:'Rota 1'},{plan,orders:[order]});a=result.tenant;const route=ops.state(a).routes[0];
  assert.throws(()=>apply(a,'route.create',{planId:plan.planId,driverId:driver.id,name:'Rota repetida'},{plan,orders:[order]}),/outra rota/);
  result=apply(a,'route.dispatch',{id:route.id},{orders:[order]});a=result.tenant;assert.equal(result.orders[0].status,'Saiu para entrega');assert.equal(result.orders[0].driverId,driver.id);
- result=apply(a,'route.deliver',{id:route.id,orderId:order.id},{orders:result.orders});assert.equal(result.orders[0].status,'Entregue');assert.equal(ops.state(result.tenant).routes[0].status,'completed');
+ result=apply(a,'route.deliver',{id:route.id,orderId:order.id,receiver:'Recebedor Teste'},{orders:result.orders});assert.equal(result.orders[0].status,'Entregue');assert.equal(ops.state(result.tenant).routes[0].status,'completed');
 });
 test('cupons e agenda são validados, caixa é estornado sem excluir histórico',()=>{
  let a=t();a=apply(a,'cash.add',{type:'expense',amount:2500,date:'2026-10-19',category:'Insumos',method:'pix',description:'Compra de embalagens'}).tenant;const original=ops.state(a).cashEntries[0];a=apply(a,'cash.reverse',{id:original.id,reason:'Lançamento incorreto'}).tenant;assert.equal(ops.state(a).cashEntries.length,2);assert.equal(ops.state(a).cashEntries[1].reverses,original.id);assert.throws(()=>apply(a,'cash.reverse',{id:original.id,reason:'Repetir'}));

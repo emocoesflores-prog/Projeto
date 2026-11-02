@@ -1,3 +1,18 @@
+VERSÃO 3.16 — OPERAÇÃO, ATENDIMENTO E ENTREGAS
+Substitua os arquivos do projeto, preservando .env, banco e TODAS as pastas privadas.
+Preserve também .driver-access (nova chave privada dos links), .order-uploads e mídias/sessões.
+Pare o servidor, faça backup e confira na pasta atual:
+  node -p "require('./package.json').version"
+Deve aparecer 3.16.0. Então execute:
+  npm ci
+  npm run migrate:operations-studio
+  npm start
+Em demonstração, pule o comando de migração SQL.
+Sem permissão DDL: execute sql/operations-studio.sql no banco atual pelo SSMS com conta autorizada.
+Não recrie o banco. Use Ctrl+F5 no painel.
+Leia OPERACAO-MULTICANAL-E-ENTREGAS-3.16.md para domínio de cada loja, DNS/HTTPS,
+WhatsApp do entregador, preservação da chave e utilização dos novos módulos.
+
 VERSÃO 3.10 — PAINEL E FILTROS DE STATUS
 Fila e controles à esquerda; ficha do pedido ampliada à direita.
 Filtro de status com seleção múltipla, ícones, cores, quantidades e Aplicar filtro.
