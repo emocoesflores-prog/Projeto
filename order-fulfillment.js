@@ -33,7 +33,7 @@ function plan(order,data,resolved){
   const fee=resolved.shippingFee,oldFee=order.fulfillment==='delivery'?order.shippingFee:0;
   if(!Number.isSafeInteger(fee)||fee<0)fail('Não foi possível calcular o frete desta modalidade.');
   const total=order.total-oldFee+fee;if(!Number.isSafeInteger(total)||total<=0)fail('O total calculado é inválido. Confira o pedido.');
-  Object.assign(associated,{shippingFee:fee,total,receipts:payments.receipts(order).map(r=>({...r}))});
+  Object.assign(associated,{shippingFee:fee,total,receipts:payments.allReceipts(order).map(r=>({...r}))});
   const received=payments.paid(order);associated.paymentStatus=received>=total?'paid':received>0?'partial':'pending';associated.refundRequired=received>total;
   if(order.pricing)associated.pricing={...order.pricing,baseTotal:order.pricing.baseTotal-oldFee+fee};
   if(data.fulfillment==='delivery'){
@@ -45,7 +45,7 @@ function plan(order,data,resolved){
    Object.assign(associated,{deliveryAddress:null,distanceQuote:null,pickupLocation:resolved.pickupLocation||null});
   }
   const complete=require('./validation').detailsSchema.safeParse({...order,...details});if(!complete.success)fail(complete.error.issues[0].message);
-  if(associated.paymentStatus!=='paid')associated.status='Aguardando pagamento';
+  if(associated.paymentStatus==='pending'||(associated.paymentStatus==='partial'&&data.fulfillment==='store'))associated.status='Aguardando pagamento';else if(associated.paymentStatus==='partial')associated.status=order.status==='Em preparação'?'Em preparação':data.scheduleMode==='now'?'Aguardando preparação':'Agendado';
   else if(data.fulfillment==='store'){associated.status='Concluído';associated.completedAt=new Date().toISOString();}
   else if(['Pronto aguardando entregador','Pronto aguardando retirada'].includes(order.status))associated.status=data.fulfillment==='delivery'?'Pronto aguardando entregador':'Pronto aguardando retirada';
  }

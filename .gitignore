@@ -11,3 +11,5 @@ node_modules/
 .tenants/
 
 .product-media/
+
+.order-uploads/

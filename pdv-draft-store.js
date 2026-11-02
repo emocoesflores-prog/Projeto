@@ -1,7 +1,7 @@
 const {z}=require('zod'),sql=require('mssql');
 const text=max=>z.string().max(max);
 const dataSchema=z.object({
- items:z.array(z.object({id:z.number().int().positive(),quantity:z.number().int().min(1).max(20),note:text(300)}).strict()).max(30),
+ items:z.array(require('./product-customization').itemSchema.strict()).max(30),
  customerId:z.uuid().nullable(),customerName:text(120),query:text(120),
  address:z.object({id:z.uuid(),version:z.number().int().nonnegative()}).strict().nullable(),
  timing:z.object({mode:z.enum(['now','scheduled']),date:text(10),slot:text(40)}).strict(),

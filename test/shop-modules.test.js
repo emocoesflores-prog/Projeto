@@ -10,7 +10,7 @@ test('categorias preservam legado, aceitam várias associações e rejeitam outr
  assert.throws(()=>apply(b,'category.save',{name:'Filha externa',parentId:parent.id,active:true}));
  assert.throws(()=>apply(a,'category.save',{id:parent.id,name:parent.name,parentId:sub.id,active:true}));
  const product={id:1,name:'Produto Teste',categoryIds:[sub.id,ops.state(a).categories.find(c=>c.name==='Buquês').id],description:'Flores',price:12300,active:true,image:'',color:'#abcdef'};
- a=apply(a,'product.save',product).tenant;assert.deepEqual(categories.catalog(a)[0].categories,['Romance › Rosas importadas','Romance','Buquês']);
+ a=apply(a,'product.save',product).tenant;assert.deepEqual(categories.catalog(a)[0].categories,['Romance','Romance › Rosas importadas','Buquês']);
  assert.throws(()=>apply(b,'product.save',product));
  a=apply(a,'category.save',{...parent,active:false}).tenant;assert.deepEqual(categories.catalog(a)[0].categories,['Buquês']);
  assert.equal(categories.catalog(b)[0].name,'Buquê Aurora');

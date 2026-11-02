@@ -42,7 +42,7 @@ function fieldDetails(order,patch){return detailsObject.partial().strict().trans
 
 const schema=detailsObject.extend({
  paymentMethod:z.string().regex(/^(pix|credit_card|debit_card|cash|bank_transfer|custom-[a-z0-9-]{1,30})$/),
- items:z.array(z.object({id:z.number().int().positive(),quantity:z.number().int().min(1).max(20),note:z.string().trim().max(300).default('')})).min(1).max(30)
+ items:z.array(require('./product-customization').itemSchema).min(1).max(30)
 }).superRefine((data,ctx)=>{validateDelivery(data,ctx);if(data.date<today())ctx.addIssue({code:'custom',message:'Escolha hoje ou uma data futura.',path:['date']})});
 function total(items,catalog,fulfillment='delivery',shippingFee=2000){return items.reduce((sum,item)=>{const product=catalog.find(p=>p.id===item.id);if(!product)throw Error('Produto indisponível');return sum+product.price*item.quantity},0)+(fulfillment==='delivery'?shippingFee:0)}
 module.exports={schema,detailsSchema,fieldDetails,total,cities,today};

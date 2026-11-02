@@ -84,11 +84,11 @@
 .order-payment-state>.ui-icon{width:27px;height:27px;flex:none}.order-payment-state strong{font-weight:800}.order-payment-state small{font-size:10px}
 :root[data-admin-theme] .dashboard .order-payment-state.payment-paid>.ui-icon{padding:3px;box-sizing:border-box;background:linear-gradient(160deg,#60e57c,#068124);color:#fff;border-radius:50%;box-shadow:0 2px 4px #067d2425}
 :root[data-admin-theme] .dashboard .order-payment-state.payment-pending{border-color:#ffb9c9;background:linear-gradient(180deg,#fff9fa,#ffe8ee);color:#d10b32}
-:root[data-admin-theme] .dashboard .order-payment-state.payment-partial{display:grid;grid-template-columns:27px auto;gap:0 9px;padding:4px 10px;border-color:#edc987;background:linear-gradient(180deg,#fff9ec,#fff0ce);color:#875100}
+:root[data-admin-theme] .dashboard .order-payment-state.payment-partial{display:grid;grid-template-columns:27px auto;gap:0 9px;padding:4px 10px;border-color:#ff9c3d;background:linear-gradient(180deg,#fff0dc,#ffdbaf);color:#a14300}
 .payment-partial>.ui-icon{grid-row:1/3}.payment-partial>small{grid-column:2;font-size:11px;font-weight:600}
 :root[data-admin-theme=dark] .dashboard .order-payment-state.payment-paid{background:linear-gradient(180deg,#213f2c,#21482b);border-color:#4f9860;color:#b3efbd}
 :root[data-admin-theme=dark] .dashboard .order-payment-state.payment-pending{background:linear-gradient(180deg,#432632,#4d2734);border-color:#a9566c;color:#ffb7ca}
-:root[data-admin-theme=dark] .dashboard .order-payment-state.payment-partial{background:linear-gradient(180deg,#44361f,#4c3b20);border-color:#a38750;color:#ffdfa6}
+:root[data-admin-theme=dark] .dashboard .order-payment-state.payment-partial{background:linear-gradient(180deg,#603311,#663514);border-color:#f39745;color:#ffcb91}
 /* Cabeçalho da ficha: identificação, andamento/impressões e edição do agendamento. */
 :root[data-admin-theme] body.dashboard.orders-mode .order-inspector{background:transparent;overflow:hidden}
 :root[data-admin-theme] body.dashboard.orders-mode .inspector-heading{display:grid;grid-template-columns:minmax(190px,.92fr) 190px minmax(270px,1.4fr);gap:14px;align-items:center;padding:12px 15px;background:var(--finish-pink);border:1px solid var(--ui-line);border-radius:14px;box-shadow:var(--ui-shadow);position:relative;flex-shrink:0;overflow:visible}
@@ -212,3 +212,5 @@
 @media(max-width:560px){:root[data-admin-theme] body.dashboard.orders-mode .header-schedule-editor .order-fulfillment-form{grid-template-columns:1fr}}
 :root[data-admin-theme] body.dashboard.orders-mode .inspector-footer-buttons:has(.closed-order-note){grid-template-columns:auto 1fr}
 .inspector-footer-buttons:has(.closed-order-note) .inspector-order-total{border-left:0;padding-left:0;text-align:left}.closed-order-note{text-align:right}
+
+:root[data-admin-theme] .kds-ticket .payment-partial{display:inline-flex;min-height:32px;border:1px solid #ff9c3d;background:var(--finish-pink);color:#a14300;border-radius:8px;padding:6px 10px;font-size:13px;font-weight:700}

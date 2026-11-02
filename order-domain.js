@@ -13,6 +13,7 @@ const mutationSchema=z.discriminatedUnion('action',[
  z.object({action:z.literal('field'),version:revision,field:z.enum(['customer','phone','recipient','recipientPhone','recipientContact','address','schedule','occasion','deliveryReference','deliveryNotes','flowerNotes','substitution','message','anonymous']),value:z.unknown()}).strict(),
  z.object({action:z.literal('status'),version:revision,status:z.string(),reason:z.string().trim().max(500).default('')}),
  require('./payment-domain').schema,
+ require('./payment-domain').voidSchema,
  z.object({action:z.literal('payment'),version:revision,confirmed:z.literal(true),reference:z.string().trim().min(4).max(160)}),
  z.object({action:z.literal('details'),version:revision,details:detailsSchema}),
  z.object({action:z.literal('production'),version:revision,checklist:z.object({arrangement:z.boolean(),card:z.boolean(),packaging:z.boolean()}),florist:z.string().trim().max(100),driver:z.string().trim().max(100),internalNote:z.string().trim().max(1000)})
@@ -56,11 +57,15 @@ function applyMutation(original,input,options={}){
   if(!details.success)throw new OrderError(details.error.issues[0].message,400);
   data.action='details';data.details=details.data;
  }
+ if(data.action==='voidReceipt'){const previous=order.receipts?.find(r=>r.voided?.operationId===data.operationId);if(previous){if(previous.id!==data.receiptId||previous.voided.reason!==data.reason)throw new OrderError('Esta correção já foi usada com outros dados.');return order;}}
  if(data.action==='settlement'){const previous=require('./payment-domain').replay(order,data);if(previous)return previous;}
+ const correctingClosed=flow.fulfilled(order)&&['payment','settlement'].includes(data.action)&&order.receipts?.some(r=>r.voided)&&require('./payment-domain').balance(order)>0,closedState=correctingClosed?{status:order.status,completedAt:order.completedAt}:null;
+ if(correctingClosed&&data.discount)throw new OrderError('Uma correção de recebimento não pode alterar o desconto do pedido encerrado.',400);
  if(data.version!==order.version)throw new OrderError('Este pedido foi alterado em outra tela. Atualize os dados antes de continuar.');
- if(flow.closed(order))throw new OrderError('Este pedido já foi encerrado e não pode ser alterado.');
- if(order.status==='Entregue'&&!(data.action==='status'&&data.status==='Concluído'))throw new OrderError('A entrega já foi confirmada. Finalize o pedido como Concluído.');
+ if(flow.closed(order)&&data.action!=='voidReceipt'&&!correctingClosed)throw new OrderError('Este pedido já foi encerrado e não pode ser alterado.');
+ if(order.status==='Entregue'&&data.action!=='voidReceipt'&&!correctingClosed&&!(data.action==='status'&&data.status==='Concluído'))throw new OrderError('A entrega já foi confirmada. Finalize o pedido como Concluído.');
  switch(data.action){
+  case 'voidReceipt':require('./payment-domain').voidReceipt(order,data,options);break;
   case 'settlement':require('./payment-domain').apply(order,data,options);break;
   case 'payment':
    if(order.paymentStatus==='paid')throw new OrderError('O pagamento já foi registrado.');
@@ -72,7 +77,7 @@ function applyMutation(original,input,options={}){
     order.status='Cancelado';order.refundRequired=require('./payment-domain').paid(order)>0;
     event(order,'status',`Pedido cancelado: ${data.reason}${order.refundRequired?'. Pagamento já registrado: verificar estorno fora do sistema.':''}`);break;
    }
-   if(order.paymentStatus!=='paid')throw new OrderError('Registre a confirmação do recebimento antes de iniciar a produção.',400);
+   if(order.paymentStatus!=='paid'&&!flow.canProduceNext(order))throw new OrderError(flow.canPrepare(order)?'Quite o saldo do pedido antes da entrega ou retirada.':'Registre ao menos um recebimento parcial antes de iniciar a produção.',400);
    if(data.status!==nextStatus(order))throw new OrderError('Etapa inválida para este pedido.',400);
    if(data.status===flow.ready(order)&&(!order.checklist.arrangement||!order.checklist.packaging||(order.message&&!order.checklist.card)))throw new OrderError('Confira arranjo, embalagem e cartão antes de marcar como pronto.');
    if(data.status==='Saiu para entrega'&&!flow.hasDestination(order))throw new OrderError('Selecione ou cadastre um endereço completo antes de despachar a entrega.',400);
@@ -105,6 +110,7 @@ function applyMutation(original,input,options={}){
    Object.assign(order,{checklist:data.checklist,florist:data.florist,driver:data.driver,internalNote:data.internalNote});
    event(order,'production','Checklist, responsáveis e observações internas atualizados.');order.history.at(-1).changes=productionChanges;break;
  }
+ if(closedState){order.status=closedState.status;if(closedState.completedAt!==undefined)order.completedAt=closedState.completedAt;else delete order.completedAt;order.refundRequired=order.status==='Cancelado'&&require('./payment-domain').paid(order)>0;}
  for(const e of order.history.slice(original.history?.length||0)){
   if(options.actor){e.actor=options.actor.name;e.actorId=options.actor.id||null;e.actorRole=options.actor.role||null;}
   e.orderVersion=order.version+1;

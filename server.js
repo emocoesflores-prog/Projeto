@@ -21,6 +21,7 @@ const tenantResources=require('./tenant-resources').createTenantResources({getId
 const platformAuth=require('./platform-auth').createPlatformAuth(platformStore,{onTenantStopped:id=>tenantResources.stop(id)});
 let pool,demoSettings={...defaults};
 const store=createOrderStore({demo,getPool:()=>pool,getTenant:tenantId,multi});
+const orderUploads=require('./order-uploads').createStore({demo,getPool:()=>pool});
 const drafts=require('./pdv-draft-store').createDraftStore({demo,getPool:()=>pool});
 const customers=createCustomerStore({demo,getPool:()=>pool,getTenant:tenantId,multi});
 const realtime=require('./realtime').createRealtime();
@@ -35,7 +36,7 @@ async function readSettings(){
  return {...defaults,deliveryFee:result.recordset[0].deliveryFee};
 }
 app.use(helmet({contentSecurityPolicy:{directives:{imgSrc:["'self'","data:","blob:","https://tile.openstreetmap.org","https:"],mediaSrc:["'self'","blob:","https:"]}}}));
-app.use(express.json({limit:'40kb'}));
+app.use(express.json({limit:'256kb'}));
 const attendanceChannels=require('./channel-routes').createChannels();
 // Emite apenas depois de a rota concluir sua transação, antes de devolver o JSON.
 app.use((req,res,next)=>{const path=req.originalUrl.split('?')[0],json=res.json;res.json=function(body){if(!['GET','HEAD','OPTIONS'].includes(req.method)&&res.statusCode<400&&(/^\/api\/admin\//.test(path)||path==='/api/orders'||/^\/api\/platform\/tenants\//.test(path))){const id=path.startsWith('/api/platform/')?req.params.id:req.account?.user.tenantId||tenantId();if(id){const channels=/\/(whatsapp|channels)\//.test(path);let topics=channels?['channels']:['operations'];if(!channels){if(path.includes('/pdv-drafts'))topics=['drafts'];else if(path.includes('/customers'))topics=['customers'];else if(path.includes('/orders'))topics=req.method==='PATCH'?['orders','operations']:['orders','operations','products'];else if(path.includes('/operations')){const action=req.body?.action||'';if(/^(workshop|route)\./.test(action))topics=['orders','operations'];else if(/^(product|category)\./.test(action))topics=['operations','products'];}else if(path.includes('/product'))topics=['operations','products'];else if(path.startsWith('/api/platform/'))topics=['orders','operations','products','customers'];}realtime.publish(id,topics);if(!channels&&!path.includes('/pdv-drafts'))queueMicrotask(()=>workshopService.tick());}}return json.call(this,body);};next();});
@@ -43,11 +44,13 @@ app.use('/api/channels/oauth',attendanceChannels.callback);
 app.use('/api',rateLimit({windowMs:60000,limit:300}));
 if(multi){app.use('/api/auth',platformAuth.router);app.use('/api/platform',platformAuth.sameOrigin,platformAuth.platform);}
 else app.get('/api/auth/state',(req,res)=>res.json({legacy:true,setupRequired:false}));
-if(multi)app.use(['/api/products','/api/store-settings','/api/orders','/api/checkout','/api/site-events'],async(req,res,next)=>{try{let tenant;if(req.query.store!==undefined){if(typeof req.query.store!=='string')throw new OrderError('Loja inválida.',400);tenant=await platformStore.bySlug(req.query.store);}else{const account=await platformAuth.readSession(req);tenant=account?.user.role==='master'?await platformStore.tenant(DEFAULT_TENANT):account?.tenant||await platformStore.tenant(DEFAULT_TENANT);}if(!tenant?.active||tenant.id===require('./tenant-context').PLATFORM_TENANT)throw new OrderError('Loja indisponível.',404);context.run(require('./tenant-context').policy(tenant),next);}catch(e){next(e)}});
+if(multi)app.use(['/api/products','/api/store-settings','/api/orders','/api/checkout','/api/site-events','/api/order-uploads'],async(req,res,next)=>{try{let tenant;if(req.query.store!==undefined){if(typeof req.query.store!=='string')throw new OrderError('Loja inválida.',400);tenant=await platformStore.bySlug(req.query.store);}else{const account=await platformAuth.readSession(req);tenant=account?.user.role==='master'?await platformStore.tenant(DEFAULT_TENANT):account?.tenant||await platformStore.tenant(DEFAULT_TENANT);}if(!tenant?.active||tenant.id===require('./tenant-context').PLATFORM_TENANT)throw new OrderError('Loja indisponível.',404);context.run(require('./tenant-context').policy(tenant),next);}catch(e){next(e)}});
 app.use('/api/admin',(req,res,next)=>{res.set('Cache-Control','no-store');next()});
 app.get('/api/health',async(req,res)=>{try{if(!demo){if(!pool)throw Error('offline');await pool.request().query('SELECT 1 AS connected');}res.json({status:'ok',mode:demo?'demo':'sqlserver'});}catch{res.status(503).json({status:'offline'});}});
 app.get('/api/store-settings',async(req,res,next)=>{try{res.set('Cache-Control','no-store').json(await readSettings())}catch(e){next(e)}});
 async function readCatalog(options={}){if(!multi)return options.privateData===false?catalog.map(p=>require('./product-domain').publicProduct(p)):catalog;const tenant=await platformStore.tenant(tenantId());return require('./shop-categories').catalog(tenant,options);}
+const uploadHandlers=[rateLimit({windowMs:15*60000,limit:30,message:{error:'Muitos envios de foto neste acesso. Aguarde alguns minutos e tente novamente.'}}),express.raw({type:'application/octet-stream',limit:'20mb'}),async(req,res,next)=>{try{const settings=await readSettings();if(!req.path.startsWith('/api/admin/')&&settings.orderingBlocked)throw new OrderError('Esta loja está indisponível para novos pedidos.',403);let name='foto';try{name=decodeURIComponent(req.headers['x-file-name']||'foto');}catch{}res.set('Cache-Control','no-store').status(201).json(await orderUploads.save(tenantId(),req.body,name));}catch(e){next(e)}}];
+app.post('/api/order-uploads',...uploadHandlers);
 app.get('/api/products',async(req,res,next)=>{try{res.set('Cache-Control','no-store').json(await readCatalog({audience:'site',privateData:false}))}catch(e){next(e)}});
 async function createOrder(body,source,actor,identity){
  if(source==='site'&&multi){const tenant=await platformStore.tenant(tenantId()),financial=require('./finance').access(tenant);if(financial.blocked&&financial.blockSite)throw new OrderError('Esta floricultura está temporariamente indisponível para novos pedidos.',403);}
@@ -75,6 +78,9 @@ async function createOrder(body,source,actor,identity){
  if(source==='manual'&&candidate.scheduleMode==='now'){candidate.date=orderOptions.localDate();candidate.period=Number(orderOptions.localTime().slice(0,2))<12?'Manhã':'Tarde';candidate.timeSlot='';}
  const parsed=schema.safeParse(candidate);if(!parsed.success)throw new OrderError(parsed.error.issues[0]?.message||'Confira os dados do pedido.',400);
  const data=parsed.data;
+ if(body.clientRequestId!==undefined&&!z.uuid().safeParse(body.clientRequestId).success)throw new OrderError('Identificador de envio inválido.',400);
+ const registration=body.clientRequestId?{id:body.clientRequestId,signature:require('./registration-domain').fingerprint({...data,customerId:body.customerId,deliveryAddressId:body.deliveryAddressId,couponCode:body.couponCode||''})}:null;
+ if(registration){const existing=multi?await platformStore.registration(tenantId(),registration.id,{demoOrders:store}):await store.get(require('./registration-domain').orderId(tenantId(),registration.id));if(existing)return require('./registration-domain').replay(existing,registration);}
  if(!multi&&!['pix','credit_card'].includes(data.paymentMethod))throw new OrderError('Forma de pagamento indisponível.',400);
  if(source==='manual'&&body.scheduleMode==='scheduled'&&!data.timeSlot)throw new OrderError('Escolha o dia e a faixa de horário do agendamento.',400);
  if(data.timeSlot&&orderOptions.expired(data.date,data.timeSlot))throw new OrderError('Esta faixa de horário já terminou. Escolha outro agendamento.',400);
@@ -84,14 +90,17 @@ async function createOrder(body,source,actor,identity){
  const quote=require('./public/delivery-rates').quote(settings,data.city,data.neighborhood);if(data.fulfillment==='delivery'&&!settings.distance?.enabled&&quote.fee===null)throw new OrderError(quote.error,400);
  const road=data.fulfillment==='delivery'?await require('./shop-routing').quoteDistance(settings,data.address,(await require('./shop-integrations').credentials(tenantId(),'routing')).key):null;
  const shippingFee=data.fulfillment==='delivery'?(road?.fee??quote.fee):0;
- let amount;try{amount=total(data.items,catalog,data.fulfillment,shippingFee)}catch{throw new OrderError('Produto indisponível.',400)}
+ const customization=require('./product-customization').priceItems(data.items,catalog,{audience:source==='site'?'site':'system',requireUploads:true});
+ const amount=customization.subtotal+shippingFee;if(amount<=0)throw new OrderError('O total do pedido deve ser maior que zero.',400);
  const salesChannel=source==='site'?'site':(body.salesChannel||'manual');if(!z.enum(['site','manual','pdv','whatsapp','instagram','facebook','gmail','outlook','imap']).safeParse(salesChannel).success)throw new OrderError('Canal de origem inválido.',400);
- if(body.clientRequestId!==undefined&&(source!=='manual'||!z.uuid().safeParse(body.clientRequestId).success))throw new OrderError('Identificador de envio inválido.',400);
- const registration=body.clientRequestId?{id:body.clientRequestId,signature:require('./registration-domain').fingerprint({...data,customerId:body.customerId,deliveryAddressId:body.deliveryAddressId,couponCode:body.couponCode||''})}:null;
+
+
  const now=new Date().toISOString();
- const items=data.items.map(item=>{const p=catalog.find(p=>p.id===item.id);return {...item,name:p.name,image:p.images?.[0]||p.image||'',unitPrice:p.price,includes:p.includes||'',internalInstructions:p.internalInstructions||'',cost:p.cost||0,fiscal:p.fiscal}});
+ const items=customization.items;
+
  const order={...data,...(registration?{registration}:{}),...(pickupLocation?{pickupLocation,pickupLocationId:pickupLocation.id}:{}),...(savedAddress?{deliveryAddress:Object.fromEntries(Object.entries(savedAddress).filter(([key])=>key!=='history'))}:{}),...(source==='manual'&&body.customerId?{customerId:body.customerId}:{}),customer:data.customer||'Consumidor final',recipient:data.recipient||data.customer||'Consumidor final',customerIdentified:!!(data.customer||data.phone),items,id:registration?require('./registration-domain').orderId(tenantId(),registration.id):randomUUID(),createdAt:now,version:0,source,salesChannel,status:'Aguardando pagamento',paymentStatus:'pending',shippingFee,...(road?{distanceQuote:road}:{}),total:amount,checklist:{arrangement:false,card:false,packaging:false},history:[{at:now,actor:source==='site'?'Cliente pelo site':actor||'Administrador',actorId:identity?.id||null,actorRole:identity?.role||(source==='site'?'customer':'owner'),type:'created',description:'Pedido registrado. Aguardando confirmação de recebimento.'}]};
- if(multi)return platformStore.insertShopOrder(tenantId(),order,{demoOrders:store,couponCode:typeof body.couponCode==='string'?body.couponCode:'',expectedTotal:body.expectedTotal,actor});
+ const assets=await orderUploads.verify(tenantId(),customization.uploadClaims,order.id);for(const item of items){item.uploads=item.uploads.map(u=>assets.get(u.id));for(const group of item.complements)for(const option of group.options)option.uploads=option.uploads.map(u=>assets.get(u.id));}
+ if(multi)return platformStore.insertShopOrder(tenantId(),order,{demoOrders:store,uploads:orderUploads,uploadClaims:customization.uploadClaims,couponCode:typeof body.couponCode==='string'?body.couponCode:'',expectedTotal:body.expectedTotal,actor});
  if(registration){const existing=await store.get(order.id);if(existing)return require('./registration-domain').replay(existing,registration);}await store.insert(order);return order;
 }
 app.post('/api/orders',async(req,res,next)=>{try{const order=await createOrder(req.body,'site');res.status(201).json({id:order.id,total:order.total,shippingFee:order.shippingFee,paymentStatus:'pending',paymentAvailable:false,mode:demo?'demo':'sqlserver'})}catch(e){next(e)}});
@@ -101,6 +110,8 @@ app.use('/api/admin',(req,res,next)=>{
  if(!expected||Buffer.byteLength(given)!==Buffer.byteLength(expected)||!timingSafeEqual(Buffer.from(given),Buffer.from(expected)))return res.status(401).json({error:'Acesso não autorizado'});
  next();
 });
+app.post('/api/admin/order-uploads',...uploadHandlers);
+app.get('/api/admin/order-uploads/:id',async(req,res,next)=>{try{if(!z.uuid().safeParse(req.params.id).success)return res.sendStatus(404);const asset=await orderUploads.get(tenantId(),req.params.id);if(!asset?.orderId||!await store.get(asset.orderId))return res.sendStatus(404);res.set('Cache-Control','private, no-store');res.type('image/png');res.download(orderUploads.filename(tenantId(),asset.id),asset.originalName.replace(/\.[^.]*$/,'')+'.png',error=>{if(error&&!res.headersSent)res.sendStatus(error.statusCode===404?404:500);});}catch(e){next(e)}});
 app.get('/api/admin/events',(req,res)=>realtime.stream(req,res,tenantId()));
 const whatsappService = require('./whatsapp-service').createWhatsAppService();
 const legacyWhatsAppRouter=require('./whatsapp-routes')(whatsappService);
@@ -210,6 +221,7 @@ async function start(){
  if(multi&&!demo){try{await pool.request().query(require('node:fs').readFileSync(require('node:path').join(__dirname,'sql/product-events.sql'),'utf8'));}catch(e){if([229,262].includes(e.number))throw Error('Histórico de produtos ainda não instalado. No SSMS, execute sql/product-events.sql no banco da plataforma com uma conta autorizada. Depois inicie novamente.');throw e;}}
  if(!demo){try{await pool.request().query(require('node:fs').readFileSync(require('node:path').join(__dirname,'sql/pdv-drafts.sql'),'utf8'));}catch(e){if([229,262].includes(e.number))throw Error('Rascunhos do PDV ainda não instalados. No SSMS, execute sql/pdv-drafts.sql no banco da plataforma com uma conta autorizada. Depois inicie novamente.');throw e;}}
  if(!demo){try{await pool.request().query(require('node:fs').readFileSync(require('node:path').join(__dirname,'sql/order-events.sql'),'utf8'));}catch(e){if([229,262].includes(e.number))throw Error('Histórico de pedidos ainda não instalado. Execute sql/order-events.sql no banco atual com uma conta autorizada e inicie novamente.');throw e;}}
+ if(!demo){try{await pool.request().query(require('node:fs').readFileSync(require('node:path').join(__dirname,'sql/order-uploads.sql'),'utf8'));}catch(e){if([229,262].includes(e.number))throw Error('Execute sql/order-uploads.sql no banco atual para instalar o armazenamento privado das fotos dos pedidos.');throw e;}}
  const httpServer=app.listen(process.env.PORT||3000,()=>console.log(`Floricultura iniciada (${demo?'DEMONSTRAÇÃO SEM PERSISTÊNCIA':'SQL Server'})`));
  if(multi)workshopService.start();
  let shuttingDown=false;
