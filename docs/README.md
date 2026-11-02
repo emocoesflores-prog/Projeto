@@ -1,3 +1,11 @@
+## Atendimento e fila — 3.16.2
+
+[Guia de atualização](../ATENDIMENTO-FIEL-E-FILA-3.16.2.md)
+
+- [Atendimento revisado](atendimento-fiel-3.16.2.png)
+- [Conexão e QR Code](whatsapp-conexao-3.16.2.png)
+- [Fila e horários](fila-envios-3.16.2.png)
+
 # Revisão das referências · 3.16.1
 
 As três referências reenviadas foram comparadas com o código e os fluxos do navegador. Veja o [relatório por imagem](../REVISAO-ODP-PDV-ATENDIMENTO-3.16.1.md). Dados fictícios e canais simulados nas capturas.

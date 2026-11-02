@@ -42,7 +42,7 @@ async function readSettings(){
 }
 app.use(helmet({contentSecurityPolicy:{directives:{imgSrc:["'self'","data:","blob:","https://tile.openstreetmap.org","https:"],mediaSrc:["'self'","blob:","https:"]}}}));
 app.use(express.json({limit:'256kb'}));app.use(publicAddresses.domain);
-const attendanceChannels=require('./channel-routes').createChannels();
+const attendanceChannels=require('./channel-routes').createChannels({getSendSettings:async id=>{const tenant=await platformStore.tenant(id);return tenant?require('./tenant-configuration').state(tenant).attendance:{};}});
 // Emite apenas depois de a rota concluir sua transação, antes de devolver o JSON.
 app.use((req,res,next)=>{const path=req.originalUrl.split('?')[0],json=res.json;res.json=function(body){if(!['GET','HEAD','OPTIONS'].includes(req.method)&&res.statusCode<400&&!path.endsWith('/preview')&&(/^\/api\/admin\//.test(path)||path==='/api/orders'||/^\/api\/platform\/tenants\//.test(path))){const id=path.startsWith('/api/platform/')?req.params.id:req.account?.user.tenantId||tenantId();if(id){const channels=/\/(whatsapp|channels|attendance|team)(?:\/|$)/.test(path);let topics=channels?['channels','attendance']:['operations'];if(!channels){if(path.includes('/pdv-drafts'))topics=['drafts'];else if(path.includes('/customers'))topics=['customers'];else if(path.includes('/orders'))topics=req.method==='PATCH'?['orders','operations']:['orders','operations','products'];else if(path.includes('/operations')){const action=req.body?.action||'';if(/^(workshop|route)\./.test(action))topics=['orders','operations'];else if(/^(product|category)\./.test(action))topics=['operations','products'];}else if(path.includes('/product'))topics=['operations','products'];else if(path.startsWith('/api/platform/'))topics=['orders','operations','products','customers'];}realtime.publish(id,topics);if(!channels&&!path.includes('/pdv-drafts'))queueMicrotask(()=>workshopService.tick());}}return json.call(this,body);};next();});
 app.use('/api/channels/oauth',attendanceChannels.callback);
@@ -220,7 +220,7 @@ require('./driver-routes')(app,{store:driverStore,platformStore,orders:store,rea
 publicAddresses.register(app);
 app.use(express.static('public'));
 app.use((err,req,res,next)=>{
- if(Number.isInteger(err.status)&&err.status>=400&&err.status<500)return res.status(err.status).json({error:err.message});
+ if(Number.isInteger(err.status)&&err.status>=400&&err.status<500)return res.status(err.status).json({error:err.message,...(err.notSent?{notSent:true}:{})});
  if(err instanceof OrderError)return res.status(err.status).json({error:err.message});
  if(err.type==='entity.parse.failed')return res.status(400).json({error:'JSON inválido.'});
  console.error(err.message);res.status(500).json({error:'Não foi possível concluir. Tente novamente.'});

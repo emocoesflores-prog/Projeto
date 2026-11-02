@@ -66,3 +66,12 @@ test('UNPAIRED ao aguardar QR e perda temporária de rede não invalidam a sess�
 test('Desconectar pelo painel solicita logout remoto e publica o estado final sem aguardar limpeza',async()=>{
  const c=new EventEmitter(),events=[];let alive=true,requested=false,finishCleanup;c.initialize=async()=>{};c.pupBrowser={isConnected:()=>alive};c.logout=async()=>{requested=true;c.emit('disconnected','LOGOUT')};c.destroy=async()=>{alive=false};c.authStrategy={logout:async()=>{},cleanup:()=>new Promise(r=>finishCleanup=r)};const service=createWhatsAppService({clientFactory:()=>c});service.subscribe(s=>events.push(s));await service.connect();c.emit('ready');await service.disconnect();assert.equal(requested,true);assert.equal(events.at(-1).canConnect,true);assert.equal(events.at(-1).status,'disconnected');finishCleanup(true);
 });
+test('Recuperar conexão reinicia o navegador sem revogar o perfil e ignora eventos da instância anterior',async()=>{
+ let calls=0,logouts=0,retirements=0;const clients=[];
+ const service=createWhatsAppService({clientFactory:()=>{const c=new EventEmitter();let alive=true;c.initialize=async()=>{};c.pupBrowser={isConnected:()=>alive};c.pupPage={isClosed:()=>!alive,evaluate:async()=>{throw Error('bridge pending')}};c.destroy=async()=>{alive=false};c.logout=async()=>{logouts++};c.authStrategy={logout:async()=>{retirements++},cleanup:async()=>true};clients.push(c);calls++;return c;}});
+ try{await service.connect();clients[0].emit('authenticated');await service.refreshStatus();assert.equal(service.status().status,'syncing');await service.restart();assert.equal(calls,2);assert.equal(logouts,0);assert.equal(retirements,0);assert.equal(service.status().status,'starting');clients[0].emit('ready');assert.equal(service.status().status,'starting');clients[1].emit('ready');assert.equal(service.status().status,'ready');}finally{await service.close();}
+});
+test('Recuperação não abre outro navegador quando o anterior mantém o perfil bloqueado',async()=>{
+ let calls=0,alive=true;const c=new EventEmitter();c.initialize=async()=>{};c.pupBrowser={isConnected:()=>alive};c.destroy=async()=>{if(alive)throw Error('locked')};const service=createWhatsAppService({clientFactory:()=>{calls++;return c;}});
+ try{await service.connect();await assert.rejects(service.restart(),{status:503});assert.equal(calls,1);assert.equal(service.status().canConnect,false);assert.equal(service.status().canDisconnect,true);assert.equal(service.status().status,'error');}finally{alive=false;await service.close();}
+});

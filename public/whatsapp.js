@@ -11,7 +11,7 @@ const WhatsAppDesk = (() => {
   const date=t=>t?new Date(t*1000).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):'';
   async function request(path,options={}) {
     const binary=options.body instanceof Blob;
-    const r=await fetch((activeChannel==='whatsapp'?'/api/admin/whatsapp':'/api/admin/channels/'+activeChannel)+path,{...options,headers:{...config.auth(),'Content-Type':binary?'application/octet-stream':'application/json'},cache:'no-store',signal:AbortSignal.timeout(path.endsWith('/suggestion')?30000:20000)});
+    const r=await fetch((activeChannel==='whatsapp'?'/api/admin/whatsapp':'/api/admin/channels/'+activeChannel)+path,{...options,headers:{...config.auth(),'Content-Type':binary?'application/octet-stream':'application/json'},cache:'no-store',signal:AbortSignal.timeout(options.method==='POST'&&/\/(messages|media)(?:\?|$)/.test(path)?900000:path.endsWith('/suggestion')?30000:20000)});
     if(!r.ok){let data;try{data=await r.json();}catch{data={error:'O servidor não respondeu como esperado.'};}throw Error((data.error||'Falha na conexão.')+(data.code?' ['+data.code+(data.diagnostic?': '+data.diagnostic:'')+']':''));}
     return options.download?r:await r.json();
   }

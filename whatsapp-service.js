@@ -1,9 +1,9 @@
 const path = require('node:path');
-function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeoutMs = 90000, shutdownTimeoutMs = 5000, dataPath = path.join(__dirname, '.wwebjs_auth') } = {}) {
+function createWhatsAppService({ clientFactory, qrEncoder, sendPolicy = require('./outbound-care').createOutboundCare(), initializationTimeoutMs = 90000, shutdownTimeoutMs = 5000, dataPath = path.join(__dirname, '.wwebjs_auth') } = {}) {
   let client, starting, startupTimer, generation = 0, probing = null, stopping = null;
   const bounded = task => { let timer; return Promise.race([Promise.resolve().then(task),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('WA_CLOSE_TIMEOUT')),shutdownTimeoutMs);})]).finally(()=>clearTimeout(timer)); };
   const subscribers=new Set();let revision=0;
-  const snapshot=()=>({...state,revision,canConnect:canConnect(),canDisconnect:canDisconnect()});
+  const snapshot=()=>({...state,revision,canConnect:canConnect(),canDisconnect:canDisconnect(),sendCare:sendPolicy.status()});
   const publish=()=>{revision++;for(const listener of subscribers){try{listener(snapshot());}catch{}}};
   const setState=next=>{state=next;queueMicrotask(publish);};
   let state = { status: 'disconnected', qr: null, error: null };
@@ -21,7 +21,7 @@ function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeout
   const canDisconnect = () => !stopping && !!client && state.status !== 'disconnected' && (browserAlive() || !['error'].includes(state.status));
   function releaseEndedSession(clearSession=true) {
     if(stopping||!client)return stopping;
-    const old=client;++generation;starting=null;clearTimeout(startupTimer);
+    const old=client;sendPolicy.cancel();++generation;starting=null;clearTimeout(startupTimer);
     setState({status:'disconnecting',qr:null,error:'Encerrando a sessão anterior…'});
     stopping=Promise.resolve().then(async()=>{
       // Remote logout can leave Chrome alive, holding the old profile.
@@ -48,10 +48,10 @@ function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeout
         if(['ready','authenticated','syncing'].includes(state.status)&&['UNPAIRED','UNPAIRED_IDLE'].includes(connection.socketState)){releaseEndedSession();return;}
         if (connection.connected && connection.readable) {
           if (!connection.bridgeReady) {
-            await active.pupPage.evaluate(require('whatsapp-web.js/src/util/Injected/Utils').LoadUtils);
+            await bounded(()=>active.pupPage.evaluate(require('whatsapp-web.js/src/util/Injected/Utils').LoadUtils));
           }
-          const verified = await active.pupPage.evaluate(inspectWhatsAppConnection);
-          const summaries = await active.pupPage.evaluate(readChatSummaries);
+          const verified = await bounded(()=>active.pupPage.evaluate(inspectWhatsAppConnection));
+          const summaries = await bounded(()=>active.pupPage.evaluate(readChatSummaries));
           if (current !== generation) return;
           if (verified.connected && verified.bridgeReady && Array.isArray(summaries)) {
             clearTimeout(startupTimer);
@@ -68,7 +68,7 @@ function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeout
     return snapshot();
   }
   const requireReady = () => {
-    if (state.status !== 'ready' || !client) throw Object.assign(new Error('Conecte o WhatsApp antes de continuar.'), { status: 409 });
+    if (state.status !== 'ready' || !client) throw Object.assign(new Error('Conecte o WhatsApp antes de continuar.'), { status:409,publicError:true,notSent:true });
     return client;
   };
   return {
@@ -134,15 +134,22 @@ function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeout
         setState({ status: 'error', qr: null, error: failureMessage(error) });
       }
     },
+    async restart() {
+      // Reabrir o Chrome preserva o perfil; somente Desconectar revoga o aparelho.
+      if(stopping)await stopping;
+      if(client)await releaseEndedSession(false);
+      if(client||stopping)throw Object.assign(new Error('Não foi possível fechar a conexão anterior. Feche a janela do WhatsApp aberta pelo sistema e tente novamente.'),{status:503,publicError:true});
+      await this.connect();
+    },
     async close() {
-      clearTimeout(startupTimer);++generation;starting=null;
+      clearTimeout(startupTimer);sendPolicy.cancel();++generation;starting=null;
       const old=client;client=null;setState({status:'disconnected',qr:null,error:null});
       if(old)await bounded(()=>old.destroy());
     },
     async disconnect() {
       if(stopping)return stopping;
       if(!canDisconnect())return;
-      clearTimeout(startupTimer);const previous=state.status;++generation;starting=null;
+      clearTimeout(startupTimer);sendPolicy.cancel();const previous=state.status;++generation;starting=null;
       const old=client;
       setState({status:'disconnecting',qr:null,error:'Encerrando a sessão do WhatsApp…'});
       stopping=(async()=>{
@@ -201,6 +208,7 @@ function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeout
       if (!result) throw Object.assign(new Error('Número não encontrado no WhatsApp.'), { status: 404 });
       return { id: result._serialized, name: digits, unread: 0, timestamp: 0, preview: '', desk: {} };
     },
+    async markRead(id){const chat=await requireReady().getChatById(id);await chat.sendSeen();return {read:true};},
     async media(id, messageId) {
       const message = await requireReady().getMessageById(messageId);
       if (!message || ![message.from, message.to].includes(id)) throw Object.assign(new Error('Anexo não encontrado.'), { status: 404 });
@@ -208,20 +216,26 @@ function createWhatsAppService({ clientFactory, qrEncoder, initializationTimeout
       if (!media || !media.data || media.data.length > 16 * 1024 * 1024) throw new Error('Anexo indisponível ou grande demais.');
       return media;
     },
-    async sendMedia(id, data, mimetype, filename, caption, voice = false) {
+    async sendMedia(id, data, mimetype, filename, caption, voice = false, authorize=async()=>true) {
       const { MessageMedia } = require('whatsapp-web.js');
-      const result = await requireReady().sendMessage(id, new MessageMedia(mimetype, data.toString('base64'), filename), { caption, sendSeen: false, sendAudioAsVoice: voice });
-      return { id: result.id._serialized };
+      const current=requireReady(),version=generation;
+      return sendPolicy.run({check:async()=>version===generation&&state.status==='ready'&&await authorize()},async()=>{
+        const result=await current.sendMessage(id,new MessageMedia(mimetype,data.toString('base64'),filename),{caption,sendSeen:false,sendAudioAsVoice:voice});
+        return {id:result.id._serialized};
+      });
     },
-    async send(id, body, quotedMessageId) {
+    async send(id, body, quotedMessageId, authorize=async()=>true) {
       const current = requireReady();
       if (quotedMessageId) {
         const quoted = await current.getMessageById(quotedMessageId);
         if (!quoted || ![quoted.from,quoted.to,quoted.id?.remote?._serialized||quoted.id?.remote].includes(id))
           throw Object.assign(new Error('A mensagem citada não pertence a esta conversa.'), { status: 400 });
       }
-      const result = await current.sendMessage(id, body, { sendSeen: false, ...(quotedMessageId ? { quotedMessageId } : {}) });
-      return { id: result.id._serialized };
+      const version=generation;let typingChat;
+      return sendPolicy.run({text:body,check:async()=>version===generation&&state.status==='ready'&&await authorize(),typing:async()=>{await current.sendPresenceAvailable?.();typingChat=await current.getChatById(id);await typingChat?.sendStateTyping?.();},clearTyping:async()=>{try{await typingChat?.clearState?.();}finally{await current.sendPresenceUnavailable?.();}}},async()=>{
+        const result=await current.sendMessage(id,body,{sendSeen:false,...(quotedMessageId?{quotedMessageId}:{})});
+        return {id:result.id._serialized};
+      });
     }
   };
 }

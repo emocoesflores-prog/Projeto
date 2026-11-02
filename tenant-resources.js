@@ -7,7 +7,7 @@ function createTenantResources({root=__dirname,makeService=require('./whatsapp-s
    if(!/^[a-f0-9-]{36}$/i.test(id))throw Error('Loja inválida');
    if(!resources.has(id))resources.set(id,(async()=>{
     const base=id===DEFAULT_TENANT?root:path.join(root,'.tenants',id);await fs.mkdir(base,{recursive:true,mode:0o700});
-    const service=makeService({dataPath:path.join(base,'.wwebjs_auth')});
+    const service=makeService({dataPath:path.join(base,'.wwebjs_auth'),sendPolicy:require('./outbound-care').createOutboundCare({getSettings:async()=>{const profile=await getIdentity(id);return profile.operations?.configuration?.attendance||{};}})});
     const desk=require('./whatsapp-desk-store').createDeskStore(path.join(base,'.whatsapp-desk.json'));
     const ai=require('./florzinha').createFlorzinha({identity:()=>getIdentity(id),credentials:()=>require('./shop-integrations').credentials(id,'assistant')});
     return {service,desk,router:require('./whatsapp-routes')(service,desk,ai)};

@@ -23,7 +23,7 @@ test('equipe compartilha a rede sem dividir a cota; transferência é auditada e
   const history=(await ok(path+'/timeline',undefined,owner)).data;
   assert.equal(history.events[0].reason,'Troca de turno com passagem do atendimento');assert.equal(history.events[0].actor.name,'Responsável Loja');
   assert.equal((await api(path,{action:'claim',version:desk.version},staff[1],'PATCH')).status,403);
-  for(const route of ['/api/admin/whatsapp/connect','/api/admin/whatsapp/disconnect','/api/admin/channels/instagram/connect','/api/admin/channels/gmail/disconnect','/api/admin/channels/oauth/fixture/finish'])assert.equal((await api(route,{},staff[0])).status,403,route);
+  for(const route of ['/api/admin/whatsapp/connect','/api/admin/whatsapp/disconnect','/api/admin/whatsapp/restart','/api/admin/channels/instagram/connect','/api/admin/channels/gmail/disconnect','/api/admin/channels/oauth/fixture/finish'])assert.equal((await api(route,{},staff[0])).status,403,route);
   assert.equal((await api('/api/admin/integrations/assistant',{key:'fixture-key',model:'gpt-4.1-mini',instructions:''},staff[0])).status,403);
   assert.equal((await api('/api/admin/assistant-settings',{assistantName:'Assistente não autorizada'},staff[0],'PUT')).status,403);
   await ok('/api/admin/assistant-settings',{assistantName:'Florzinha Revisada'},owner,'PUT');

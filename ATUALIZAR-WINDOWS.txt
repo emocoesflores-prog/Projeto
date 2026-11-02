@@ -1,3 +1,11 @@
+VERSÃO 3.16.2 — ATENDIMENTO E FILA DE ENVIO
+Encerre o servidor antes de substituir os arquivos. Preserve .env, banco, .tenants, .wwebjs_auth, mídias, .order-uploads e .driver-access.
+Execute npm ci e npm start; no painel, Ctrl + F5. Da 3.16/3.16.1, não há nova migração.
+Guia completo: ATENDIMENTO-FIEL-E-FILA-3.16.2.md
+WhatsApp: Gerenciar canais > WhatsApp > Recuperar sessão.
+Fila e limites: Gerenciar canais > Fila e horários de envio.
+Enter envia; Shift + Enter quebra a linha.
+
 VERSÃO 3.16.1 — REVISÃO ODP, PDV E ATENDIMENTO
 Pare o servidor e preserve .env, banco e todas as pastas privadas ao substituir os arquivos.
 Depois, na pasta com o package.json 3.16.1, execute:

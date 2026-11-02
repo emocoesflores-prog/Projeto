@@ -13,6 +13,7 @@ function whatsappRoutes(service, desk = require('./whatsapp-desk-store').createD
   });
   router.get('/status', async (req,res,next) => { try { const state = service.refreshStatus ? await service.refreshStatus() : service.status(); res.json({ ...state, aiConfigured: await florzinha.configured() }); } catch(e) { next(e); } });
   router.post('/connect', async (req,res,next) => { try { await service.connect(); res.status(202).json(service.status()); } catch(e) { next(e); } });
+  router.post('/restart', async (req,res,next) => { try { await service.restart(); res.status(202).json(service.status()); } catch(e) { next(e); } });
   router.post('/disconnect', async (req,res,next) => { try { await service.disconnect(); res.json(service.status()); } catch(e) { next(e); } });
   router.get('/chats', async (req,res,next) => { try { const metadata = await desk.all(); const chats=(await service.chats()).map(chat=>({...chat,desk:metadata[chat.id]||{}}));res.json(req.decorateChats?await req.decorateChats(chats):chats); } catch(e) { next(e); } });
   router.post('/new-chat', async (req,res,next) => {
@@ -24,6 +25,7 @@ function whatsappRoutes(service, desk = require('./whatsapp-desk-store').createD
     if (!/^\d{5,20}@(c\.us|lid)$/.test(req.params.id)) return res.status(400).json({ error: 'Conversa individual inválida.' });
     next();
   });
+  router.post('/chats/:id/read',async(req,res,next)=>{try{if(req.conversation&&req.conversation.assignedUserId!==req.account?.user.id)return res.status(403).json({error:'Assuma o atendimento antes de marcar como lido.'});if(req.markReadAllowed&&!await req.markReadAllowed())return res.json({read:false});res.json(await service.markRead(req.params.id));}catch(error){next(error)}});
   router.get('/chats/:id/contact',async(req,res,next)=>{try{res.json({phone:service.contactPhone?await service.contactPhone(req.params.id):null});}catch(e){next(e)}});
   router.patch('/chats/:id/desk', async (req,res,next) => {
     const parsed = z.object({ status: z.enum(['new','open','done']).optional(), favorite: z.boolean().optional(), aiEnabled: z.boolean().optional(),
@@ -51,7 +53,7 @@ function whatsappRoutes(service, desk = require('./whatsapp-desk-store').createD
     if (!['image/jpeg','image/png','image/webp','application/pdf','audio/mpeg','audio/ogg','audio/mp4','audio/webm','video/mp4'].includes(mime) || !Buffer.isBuffer(req.body) || !req.body.length)
       return res.status(400).json({ error: 'Selecione imagem, PDF, áudio ou vídeo de até 8 MB.' });
     const filename = String(req.query.filename || 'anexo').replace(/[^a-zA-Z0-9._-]/g,'_').slice(0,100);
-    try { res.status(201).json(await service.sendMedia(req.params.id,req.body,mime,filename,'',req.query.voice === '1' && mime.startsWith('audio/'))); } catch(e) { next(e); }
+    try {const task=authorize=>service.sendMedia(req.params.id,req.body,mime,filename,'',req.query.voice==='1'&&mime.startsWith('audio/'),authorize);if(req.enqueueAttendanceSend)return await req.enqueueAttendanceSend(task);res.status(201).json(await task()); } catch(e) { next(e); }
   });
   router.post('/chats/:id/suggestion', async (req,res,next) => {
     try {
@@ -64,10 +66,10 @@ function whatsappRoutes(service, desk = require('./whatsapp-desk-store').createD
   router.post('/chats/:id/messages', async (req,res,next) => {
     const parsed = z.object({ body: z.string().trim().min(1).max(4000), quotedMessageId: z.string().min(1).max(250).optional() }).safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Escreva uma mensagem de até 4.000 caracteres.' });
-    try { res.status(201).json(await service.send(req.params.id, parsed.data.body, parsed.data.quotedMessageId)); } catch(e) { next(e); }
+    try {const task=authorize=>service.send(req.params.id,parsed.data.body,parsed.data.quotedMessageId,authorize);if(req.enqueueAttendanceSend)return await req.enqueueAttendanceSend(task);res.status(201).json(await task()); } catch(e) { next(e); }
   });
   router.use((err,req,res,next) => {
-    if (err.publicError) return res.status(err.status).json({error:err.message});
+    if (err.publicError) return res.status(err.status).json({error:err.message,...(err.notSent?{notSent:true}:{})});
     if ([400,404,409].includes(err.status)) return res.status(err.status).json({ error: err.message });
     if (err.type === 'entity.too.large') return res.status(413).json({ error: 'O arquivo deve ter no máximo 8 MB.' });
     const messages = {
@@ -77,6 +79,7 @@ function whatsappRoutes(service, desk = require('./whatsapp-desk-store').createD
       chats: ['WA_CHATS_FAILED', 'Não foi possível carregar as conversas. A sessão pode continuar conectada; tente Atualizar conversas.'],
       messages: ['WA_MESSAGES_FAILED', 'Não foi possível carregar as mensagens desta conversa.'],
       send: ['WA_SEND_FAILED', 'Não foi possível confirmar o envio. Confira a conversa no celular antes de reenviar.'],
+      restart: ['WA_RESTART_FAILED', 'Não foi possível recuperar a sessão. Confira se o navegador anterior encerrou e tente novamente.'],
       disconnect: ['WA_DISCONNECT_FAILED', 'Não foi possível confirmar a desconexão. Confira Aparelhos conectados no celular.'],
       connect: ['WA_CONNECT_FAILED', 'Não foi possível iniciar a conexão.']
     };
