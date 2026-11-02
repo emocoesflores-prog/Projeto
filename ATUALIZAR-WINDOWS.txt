@@ -1,3 +1,12 @@
+VERSÃO 3.16.1 — REVISÃO ODP, PDV E ATENDIMENTO
+Pare o servidor e preserve .env, banco e todas as pastas privadas ao substituir os arquivos.
+Depois, na pasta com o package.json 3.16.1, execute:
+  npm ci
+  npm start
+Use Ctrl+F5 no navegador. Não há nova migração desde a 3.16.
+Se vier da 3.15 ou anterior, execute antes: npm run migrate:operations-studio
+Veja REVISAO-ODP-PDV-ATENDIMENTO-3.16.1.md para o relatório por imagem e testes.
+
 VERSÃO 3.16 — OPERAÇÃO, ATENDIMENTO E ENTREGAS
 Substitua os arquivos do projeto, preservando .env, banco e TODAS as pastas privadas.
 Preserve também .driver-access (nova chave privada dos links), .order-uploads e mídias/sessões.

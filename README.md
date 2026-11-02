@@ -1,3 +1,5 @@
+> **Versão 3.16.1:** revisão das referências de ODP, PDV e Atendimento, transferência auditada, notas concorrentes, proteção do destinatário de anexos/áudios e cotas por atendente. [Conferência por imagem e atualização](REVISAO-ODP-PDV-ATENDIMENTO-3.16.1.md).
+
 > **Versão 3.16:** novas telas de ODP, PDV, Atendimento e Entregas; preço por venda com motivo, troco, equipe simultânea, links individuais por floricultura/entregador e revisão auditada de itens. **Nova migração SQL:** [guia de atualização](OPERACAO-MULTICANAL-E-ENTREGAS-3.16.md).
 
 > **Versão 3.15:** parcial no ODP com tag laranja, categorias em três níveis, complementos por produto com opções do catálogo, envio privado de fotos e correção auditada de recebimentos. **Novas tabelas de fotos:** [guia de atualização](COMPLEMENTOS-FOTOS-E-PAGAMENTOS-3.15.md).

@@ -2,7 +2,7 @@ const {createHash}=require('node:crypto'),{z}=require('zod');
 const providers=['whatsapp','instagram','facebook','gmail','outlook','imap'];
 const schema=z.discriminatedUnion('action',[
  z.object({action:z.literal('claim'),version:z.number().int().nonnegative()}).strict(),
- z.object({action:z.literal('assign'),version:z.number().int().nonnegative(),userId:z.uuid().nullable()}).strict(),
+ z.object({action:z.literal('assign'),version:z.number().int().nonnegative(),userId:z.uuid().nullable(),reason:z.string().trim().max(300).default('')}).strict(),
  z.object({action:z.literal('update'),version:z.number().int().nonnegative(),patch:z.object({status:z.enum(['new','open','done']).optional(),favorite:z.boolean().optional(),aiEnabled:z.boolean().optional(),orderId:z.union([z.uuid(),z.literal('')]).optional()}).strict()}).strict(),
  z.object({action:z.literal('link'),version:z.number().int().nonnegative(),customerId:z.uuid().nullable()}).strict()
 ]);
@@ -22,7 +22,7 @@ function apply(current,input,actor,team,now=new Date()){
  if(data.action==='update')Object.assign(next,data.patch);
  if(data.action==='link')next.customerId=data.customerId;
  const changes=['assignedUserId','status','favorite','aiEnabled','customerId','orderId'].filter(k=>JSON.stringify(next[k])!==JSON.stringify(current[k])).map(field=>({field,before:current[field]??null,after:next[field]??null}));
- if(!changes.length)return {next,event:null};next.version++;next.updatedAt=now.toISOString();const event={action:data.action,at:next.updatedAt,actor:identity(actor),changes};return {next,event};
+ if(!changes.length)return {next,event:null};next.version++;next.updatedAt=now.toISOString();const event={action:data.action,at:next.updatedAt,actor:identity(actor),changes,...(data.action==='assign'&&data.reason?{reason:data.reason}:{})};return {next,event};
 }
 function canSend(current,actor,now=new Date()){if(current.status==='done')fail('Reabra o atendimento antes de enviar uma resposta.');if(current.assignedUserId!==actor.id)fail(current.assignedUserId?'Esta conversa está com outro atendente.':'Assuma o atendimento antes de enviar uma resposta.',403);if(current.leaseUntil&&new Date(current.leaseUntil)>now)fail('Há uma mensagem em envio nesta conversa. Aguarde a confirmação.');}
 module.exports={providers,key,hash,identity,initial,apply,canSend,editable,fail};

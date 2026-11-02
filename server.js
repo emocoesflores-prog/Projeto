@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express=require('express');
 const helmet=require('helmet');
-const {rateLimit}=require('express-rate-limit');
+const {rateLimit,ipKeyGenerator}=require('express-rate-limit');
 const sql=require('mssql');
 const {randomUUID,timingSafeEqual}=require('node:crypto');
 const {z}=require('zod');
@@ -46,7 +46,9 @@ const attendanceChannels=require('./channel-routes').createChannels();
 // Emite apenas depois de a rota concluir sua transação, antes de devolver o JSON.
 app.use((req,res,next)=>{const path=req.originalUrl.split('?')[0],json=res.json;res.json=function(body){if(!['GET','HEAD','OPTIONS'].includes(req.method)&&res.statusCode<400&&!path.endsWith('/preview')&&(/^\/api\/admin\//.test(path)||path==='/api/orders'||/^\/api\/platform\/tenants\//.test(path))){const id=path.startsWith('/api/platform/')?req.params.id:req.account?.user.tenantId||tenantId();if(id){const channels=/\/(whatsapp|channels|attendance|team)(?:\/|$)/.test(path);let topics=channels?['channels','attendance']:['operations'];if(!channels){if(path.includes('/pdv-drafts'))topics=['drafts'];else if(path.includes('/customers'))topics=['customers'];else if(path.includes('/orders'))topics=req.method==='PATCH'?['orders','operations']:['orders','operations','products'];else if(path.includes('/operations')){const action=req.body?.action||'';if(/^(workshop|route)\./.test(action))topics=['orders','operations'];else if(/^(product|category)\./.test(action))topics=['operations','products'];}else if(path.includes('/product'))topics=['operations','products'];else if(path.startsWith('/api/platform/'))topics=['orders','operations','products','customers'];}realtime.publish(id,topics);if(!channels&&!path.includes('/pdv-drafts'))queueMicrotask(()=>workshopService.tick());}}return json.call(this,body);};next();});
 app.use('/api/channels/oauth',attendanceChannels.callback);
-app.use('/api',rateLimit({windowMs:60000,limit:300}));
+app.use('/api',rateLimit({windowMs:60000,limit:300,skip:req=>req.path==='/admin'||req.path.startsWith('/admin/')}));
+// Falhas são limitadas por IP; operadores autenticados têm sua própria cota.
+app.use('/api/admin',rateLimit({windowMs:60000,limit:300,skipSuccessfulRequests:true,message:{error:'Muitas tentativas de acesso. Aguarde um minuto.'}}));
 if(multi){app.use('/api/auth',platformAuth.router);app.use('/api/platform',platformAuth.sameOrigin,platformAuth.platform);}
 else app.get('/api/auth/state',(req,res)=>res.json({legacy:true,setupRequired:false}));
 if(multi)app.use(['/api/products','/api/store-settings','/api/orders','/api/checkout','/api/site-events','/api/order-uploads'],async(req,res,next)=>{try{let tenant;if(req.query.store!==undefined){if(typeof req.query.store!=='string')throw new OrderError('Loja inválida.',400);tenant=await platformStore.bySlug(req.query.store);}else if(req.publicTenant){tenant=req.publicTenant;}else{const account=await platformAuth.readSession(req);tenant=account?.user.role==='master'?await platformStore.tenant(DEFAULT_TENANT):account?.tenant||await platformStore.tenant(DEFAULT_TENANT);}if(req.publicTenant&&tenant?.id!==req.publicTenant.id)throw new OrderError('Loja indisponível neste domínio.',404);if(!tenant?.active||tenant.id===require('./tenant-context').PLATFORM_TENANT)throw new OrderError('Loja indisponível.',404);context.run(require('./tenant-context').policy(tenant),next);}catch(e){next(e)}});
@@ -54,7 +56,7 @@ app.use('/api/admin',(req,res,next)=>{res.set('Cache-Control','no-store');next()
 app.get('/api/health',async(req,res)=>{try{if(!demo){if(!pool)throw Error('offline');await pool.request().query('SELECT 1 AS connected');}res.json({status:'ok',mode:demo?'demo':'sqlserver'});}catch{res.status(503).json({status:'offline'});}});
 app.get('/api/store-settings',async(req,res,next)=>{try{res.set('Cache-Control','no-store').json(await readSettings())}catch(e){next(e)}});
 async function readCatalog(options={}){if(!multi)return options.privateData===false?catalog.map(p=>require('./product-domain').publicProduct(p)):catalog;const tenant=await platformStore.tenant(tenantId());return require('./shop-categories').catalog(tenant,options);}
-const uploadHandlers=[rateLimit({windowMs:15*60000,limit:30,message:{error:'Muitos envios de foto neste acesso. Aguarde alguns minutos e tente novamente.'}}),express.raw({type:'application/octet-stream',limit:'20mb'}),async(req,res,next)=>{try{const settings=await readSettings();if(!req.path.startsWith('/api/admin/')&&settings.orderingBlocked)throw new OrderError('Esta loja está indisponível para novos pedidos.',403);let name='foto';try{name=decodeURIComponent(req.headers['x-file-name']||'foto');}catch{}res.set('Cache-Control','no-store').status(201).json(await orderUploads.save(tenantId(),req.body,name));}catch(e){next(e)}}];
+const uploadHandlers=[rateLimit({windowMs:15*60000,limit:30,keyGenerator:req=>req.account?.user?req.account.user.tenantId+':'+req.account.user.id:ipKeyGenerator(req.ip),message:{error:'Muitos envios de foto neste acesso. Aguarde alguns minutos e tente novamente.'}}),express.raw({type:'application/octet-stream',limit:'20mb'}),async(req,res,next)=>{try{const settings=await readSettings();if(!req.path.startsWith('/api/admin/')&&settings.orderingBlocked)throw new OrderError('Esta loja está indisponível para novos pedidos.',403);let name='foto';try{name=decodeURIComponent(req.headers['x-file-name']||'foto');}catch{}res.set('Cache-Control','no-store').status(201).json(await orderUploads.save(tenantId(),req.body,name));}catch(e){next(e)}}];
 app.post('/api/order-uploads',...uploadHandlers);
 app.get('/api/products',async(req,res,next)=>{try{res.set('Cache-Control','no-store').json(await readCatalog({audience:'site',privateData:false}))}catch(e){next(e)}});
 async function createOrder(body,source,actor,identity){
@@ -118,6 +120,7 @@ app.use('/api/admin',(req,res,next)=>{
  if(!expected||Buffer.byteLength(given)!==Buffer.byteLength(expected)||!timingSafeEqual(Buffer.from(given),Buffer.from(expected)))return res.status(401).json({error:'Acesso não autorizado'});
  next();
 });
+app.use('/api/admin',rateLimit({windowMs:60000,limit:300,keyGenerator:req=>req.account?.user?req.account.user.tenantId+':'+req.account.user.id:ipKeyGenerator(req.ip),message:{error:'Muitas operações neste acesso. Aguarde um minuto antes de tentar novamente.'}}));
 app.post('/api/admin/order-uploads',...uploadHandlers);
 app.get('/api/admin/order-uploads/:id',async(req,res,next)=>{try{if(!z.uuid().safeParse(req.params.id).success)return res.sendStatus(404);const asset=await orderUploads.get(tenantId(),req.params.id);if(!asset?.orderId||!await store.get(asset.orderId))return res.sendStatus(404);res.set('Cache-Control','private, no-store');res.type('image/png');res.download(orderUploads.filename(tenantId(),asset.id),asset.originalName.replace(/\.[^.]*$/,'')+'.png',error=>{if(error&&!res.headersSent)res.sendStatus(error.statusCode===404?404:500);});}catch(e){next(e)}});
 app.get('/api/admin/events',(req,res)=>realtime.stream(req,res,tenantId()));
@@ -150,7 +153,7 @@ app.put('/api/admin/delivery-settings',async(req,res,next)=>{try{
  await platformStore.saveTenant(tenantId(),{profile});res.json(await readSettings());
 }catch(e){next(e)}});
 app.get('/api/admin/assistant-settings',async(req,res,next)=>{try{const settings=await readSettings();res.json({assistantName:settings.assistantName||'Florzinha'})}catch(e){next(e)}});
-app.put('/api/admin/assistant-settings',async(req,res,next)=>{try{if(!multi)throw new OrderError('Ative o modo de plataforma para personalizar a assistente.',400);const data=z.object({assistantName:z.string().trim().min(2).max(60)}).strict().safeParse(req.body);if(!data.success)throw new OrderError('Informe um nome com 2 a 60 caracteres.',400);await platformStore.saveTenant(tenantId(),{profile:data.data});res.json(data.data);}catch(e){next(e)}});
+app.put('/api/admin/assistant-settings',async(req,res,next)=>{try{if(!multi)throw new OrderError('Ative o modo de plataforma para personalizar a assistente.',400);if(req.account.user.role!=='owner')throw new OrderError('Somente o responsável configura a assistente da floricultura.',403);const data=z.object({assistantName:z.string().trim().min(2).max(60)}).strict().safeParse(req.body);if(!data.success)throw new OrderError('Informe um nome com 2 a 60 caracteres.',400);await platformStore.saveTenant(tenantId(),{profile:data.data});res.json(data.data);}catch(e){next(e)}});
 app.get('/api/admin/cep/:cep',async(req,res,next)=>{try{res.json(await lookupCep(req.params.cep))}catch(error){next(error)}});
 app.get('/api/admin/customers/:id/addresses',async(req,res,next)=>{try{
  if(!z.uuid().safeParse(req.params.id).success)throw new OrderError('Cliente inválido.',400);

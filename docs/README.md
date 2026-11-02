@@ -1,3 +1,13 @@
+# Revisão das referências · 3.16.1
+
+As três referências reenviadas foram comparadas com o código e os fluxos do navegador. Veja o [relatório por imagem](../REVISAO-ODP-PDV-ATENDIMENTO-3.16.1.md). Dados fictícios e canais simulados nas capturas.
+
+![Oficina com fila compacta](odp-revisao-3.16.1.png)
+
+![PDV com recebido e troco](pdv-revisao-3.16.1.png)
+
+![Atendimento com transferência e filtros](atendimento-revisao-3.16.1.png)
+
 # Operação 3.16
 
 Capturas com dados fictícios e canais simulados. Veja o [guia de instalação e utilização](../OPERACAO-MULTICANAL-E-ENTREGAS-3.16.md).
