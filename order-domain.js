@@ -9,6 +9,7 @@ function event(order,type,description){order.history.push({at:new Date().toISOSt
 const revision=z.number().int().nonnegative();
 const mutationSchema=z.discriminatedUnion('action',[
  require('./order-selection').schema,
+ require('./order-fulfillment').schema,
  z.object({action:z.literal('field'),version:revision,field:z.enum(['customer','phone','recipient','recipientPhone','recipientContact','address','schedule','occasion','deliveryReference','deliveryNotes','flowerNotes','substitution','message','anonymous']),value:z.unknown()}).strict(),
  z.object({action:z.literal('status'),version:revision,status:z.string(),reason:z.string().trim().max(500).default('')}),
  require('./payment-domain').schema,
@@ -19,7 +20,11 @@ const mutationSchema=z.discriminatedUnion('action',[
 function applyMutation(original,input,options={}){
  const parsed=mutationSchema.safeParse(input);if(!parsed.success)throw new OrderError('Confira os dados, a confirmação e a versão do pedido.',400);
  const data=parsed.data,order=normalizeOrder(structuredClone(original));
- let selectionPatch={};
+ let selectionPatch={},fulfillmentChange=false;
+ if(data.action==='fulfillment'){
+  if(data.expectedTotal===undefined)throw new OrderError('Confira o total antes de salvar a modalidade.',400);
+  const plan=require('./order-fulfillment').plan(order,data,options.fulfillment);selectionPatch=plan.associated;data.action='details';data.details=plan.details;fulfillmentChange=true;
+ }
  if(data.action==='selection'){
   const {customer,address}=options.selection||{};
   if(!customer||customer.id.toLowerCase()!==data.customerId.toLowerCase())throw new OrderError('Selecione o cadastro de cliente novamente.',400);
@@ -75,9 +80,9 @@ function applyMutation(original,input,options={}){
    if(data.status==='Em preparação')order.workshopStartedAt=new Date().toISOString();
    order.status=data.status;if(data.status==='Concluído')order.completedAt=new Date().toISOString();if(data.status==='Entregue')order.deliveredAt=new Date().toISOString();event(order,'status',`Etapa alterada para ${data.status}.`);break;
   case 'details':{
-   if(['Saiu para entrega','Pronto aguardando retirada'].includes(order.status))throw new OrderError('Os dados de entrega não podem mudar após a expedição.');
-   if(data.details.pickupLocationId&&data.details.pickupLocationId!==order.pickupLocationId)throw new OrderError('O local de retirada deste pedido está preservado. Crie outro pedido para alterar a unidade.');
-   if(data.details.fulfillment!==undefined&&data.details.fulfillment!==order.fulfillment)throw new OrderError('A modalidade não pode ser alterada: crie outro pedido para preservar o frete original.');
+   if(order.status==='Saiu para entrega'||(order.status==='Pronto aguardando retirada'&&!fulfillmentChange))throw new OrderError('Os dados de entrega não podem mudar após a expedição.');
+   if(!fulfillmentChange&&data.details.pickupLocationId&&data.details.pickupLocationId!==order.pickupLocationId)throw new OrderError('O local de retirada deste pedido está preservado. Crie outro pedido para alterar a unidade.');
+   if(!fulfillmentChange&&data.details.fulfillment!==undefined&&data.details.fulfillment!==order.fulfillment)throw new OrderError('Use a edição de modalidade para conferir o frete e o total.');
    if(data.details.date!==undefined&&data.details.date!==order.date&&data.details.date<today())throw new OrderError('O novo agendamento não pode ser no passado.',400);
    if(data.details.timeSlot&&(data.details.date!==order.date||data.details.timeSlot!==order.timeSlot)&&orderOptions.expired(data.details.date||order.date,data.details.timeSlot))throw new OrderError('A nova faixa de horário já terminou.',400);
    const changes=Object.keys(data.details).filter(key=>data.details[key]!==order[key]);
@@ -92,7 +97,7 @@ function applyMutation(original,input,options={}){
    if(cardChanged)order.checklist.card=false;
    if(flowersChanged)order.checklist.arrangement=false;
    if((cardChanged||flowersChanged)&&order.status===flow.ready(order)){order.status='Aguardando preparação';delete order.workshopStartedAt;event(order,'status','Conferência reiniciada após alterar o cartão ou as orientações do arranjo.');}
-   event(order,'details',`Dados atualizados: ${[...changes,...associated].join(', ')||'sem alteração de campos'}. Valores e itens preservados.`);order.history.at(-1).changes=auditChanges;break;
+   event(order,'details',`Dados atualizados: ${[...changes,...associated].join(', ')||'sem alteração de campos'}. ${fulfillmentChange?'Modalidade e agendamento conferidos; frete recalculado quando a modalidade muda.':'Valores e itens preservados.'}`);order.history.at(-1).changes=auditChanges;break;
   }
   case 'production':
    const productionChanges=['checklist','florist','driver','internalNote'].filter(field=>JSON.stringify(order[field])!==JSON.stringify(data[field])).map(field=>({field,before:order[field]??null,after:data[field]}));

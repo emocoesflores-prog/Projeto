@@ -199,5 +199,16 @@
 @media(max-width:1150px) and (min-width:1000px){.order-contact-grid{grid-template-columns:1fr}:root[data-admin-theme] body.dashboard.orders-mode .inspector-tabs{grid-template-columns:repeat(3,minmax(0,1fr))!important}:root[data-admin-theme] body.dashboard.orders-mode .inspector-tab{min-height:45px;font-size:15px!important}.header-order-meta-item strong{font-size:14px}}
 @media(max-width:560px){:root[data-admin-theme] body.dashboard.orders-mode .inspector-heading>.inspector-tools{grid-template-columns:1fr 1fr!important}:root[data-admin-theme] body.dashboard.orders-mode .inspector-tools .order-status{grid-column:1/-1}}
 :root[data-admin-theme] body.dashboard .dashboard-topbar .hub-back{color:var(--ui-accent)!important}
+.fulfillment-quote{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px;border-radius:9px;background:var(--finish-pink)}
+.fulfillment-quote:empty{display:none}.fulfillment-quote>div{display:grid;gap:3px}.fulfillment-quote>p{grid-column:1/-1;margin:0}
+.fulfillment-address-preview{padding:10px;border:1px solid var(--ui-line);border-radius:9px}.fulfillment-address-preview p{margin:5px 0}
+:root[data-admin-theme] body.dashboard.orders-mode .header-schedule-editor:not([hidden]){max-height:calc(100dvh - 230px);overflow-y:auto;overscroll-behavior:contain}
+@media(max-width:999px){:root[data-admin-theme] body.dashboard.orders-mode .header-schedule-editor:not([hidden]){max-height:65dvh}}
+:root[data-admin-theme] body.dashboard.orders-mode .header-schedule-editor .order-fulfillment-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0;padding:12px;align-content:start}
+:root[data-admin-theme] body.dashboard.orders-mode .order-fulfillment-form>label{margin:0;padding:0;min-height:0;gap:6px;align-content:start}
+.order-fulfillment-form>label:has([name=pickupLocationId]),.order-fulfillment-form>:not(label){grid-column:1/-1}
+.order-fulfillment-form .ui-select-icon{display:none}
+.order-fulfillment-form .inline-edit-actions{position:sticky;bottom:0;background:var(--ui-panel);padding:8px 0;z-index:1}
+@media(max-width:560px){:root[data-admin-theme] body.dashboard.orders-mode .header-schedule-editor .order-fulfillment-form{grid-template-columns:1fr}}
 :root[data-admin-theme] body.dashboard.orders-mode .inspector-footer-buttons:has(.closed-order-note){grid-template-columns:auto 1fr}
 .inspector-footer-buttons:has(.closed-order-note) .inspector-order-total{border-left:0;padding-left:0;text-align:left}.closed-order-note{text-align:right}

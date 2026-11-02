@@ -169,10 +169,22 @@ app.get('/api/admin/orders/:id/events',async(req,res,next)=>{try{const id=z.uuid
 app.get('/api/admin/orders/:id',async(req,res,next)=>{try{if(!z.uuid().safeParse(req.params.id).success)throw new OrderError('Pedido inválido.',400);const order=await store.get(req.params.id);if(!order)throw new OrderError('Pedido não encontrado.',404);res.json(order);}catch(e){next(e)}});
 app.get('/api/admin/orders',async(req,res,next)=>{try{res.json(await store.list())}catch(e){next(e)}});
 app.post('/api/admin/orders',async(req,res,next)=>{try{res.status(201).json(await createOrder(req.body,'manual',req.account?.user.name||'Administrador',req.account?.user))}catch(e){next(e)}});
+async function resolveFulfillment(input,id){
+ const [order,settings]=await Promise.all([store.get(id),readSettings()]);
+ const resolved=await require('./order-fulfillment').resolve(input,order,{customers,settings,quoteDistance:async address=>require('./shop-routing').quoteDistance(settings,address,(await require('./shop-integrations').credentials(tenantId(),'routing')).key)});
+ const plan=require('./order-fulfillment').plan(order,input,resolved),next=require('./order-domain').applyMutation(order,{...input,expectedTotal:plan.quote.total},{fulfillment:resolved});
+ if(order.fulfillment!==next.fulfillment||order.date!==next.date||order.scheduleMode!==next.scheduleMode||order.timeSlot!==next.timeSlot){const issue=require('./public/shop-rules').issue(settings.schedule,next);if(issue)throw new OrderError(issue,400);}
+ return {order,resolved,quote:plan.quote};
+}
+app.post('/api/admin/orders/:id/fulfillment-quote',async(req,res,next)=>{try{
+ if(!z.uuid().safeParse(req.params.id).success)throw new OrderError('Código de pedido inválido.',400);
+ const {quote}=await resolveFulfillment(req.body,req.params.id);res.json(quote);
+}catch(e){next(e)}});
 app.patch('/api/admin/orders/:id',async(req,res,next)=>{try{
  if(!z.uuid().safeParse(req.params.id).success)throw new OrderError('Código de pedido inválido.',400);
  const selection=req.body?.action==='selection'?await require('./order-selection').resolve(req.body,customers):undefined;
- res.json(multi&&['details','field','selection'].includes(req.body?.action)?await platformStore.rescheduleOrder(tenantId(),req.params.id,req.body,{demoOrders:store,selection,actor:{id:req.account?.user.id||null,name:req.account?.user.name||'Administrador',role:req.account?.user.role||'owner'}}):await store.mutate(req.params.id,req.body,{selection,actor:{id:req.account?.user.id||null,name:req.account?.user.name||'Administrador',role:req.account?.user.role||'owner'},canDiscount:!multi||req.account?.user.role==='owner',methods:(await readSettings()).payments||[{id:'pix',name:'PIX'},{id:'credit_card',name:'Cartão de crédito'},{id:'cash',name:'Dinheiro'},{id:'debit_card',name:'Cartão de débito'}]}));
+ const fulfillment=req.body?.action==='fulfillment'?(await resolveFulfillment(req.body,req.params.id)).resolved:undefined;
+ res.json(multi&&['details','field','selection','fulfillment'].includes(req.body?.action)?await platformStore.rescheduleOrder(tenantId(),req.params.id,req.body,{demoOrders:store,selection,fulfillment,actor:{id:req.account?.user.id||null,name:req.account?.user.name||'Administrador',role:req.account?.user.role||'owner'}}):await store.mutate(req.params.id,req.body,{selection,fulfillment,actor:{id:req.account?.user.id||null,name:req.account?.user.name||'Administrador',role:req.account?.user.role||'owner'},canDiscount:!multi||req.account?.user.role==='owner',methods:(await readSettings()).payments||[{id:'pix',name:'PIX'},{id:'credit_card',name:'Cartão de crédito'},{id:'cash',name:'Dinheiro'},{id:'debit_card',name:'Cartão de débito'}]}));
 }catch(e){next(e)}});
 app.get('/painel/:slug',async(req,res,next)=>{try{if(!multi)return res.sendStatus(404);const tenant=await platformStore.bySlug(req.params.slug);if(!tenant?.active||tenant.id===require('./tenant-context').PLATFORM_TENANT)return res.status(404).send('Painel indisponível.');res.sendFile(require('node:path').join(__dirname,'public/admin.html'));}catch(e){next(e)}});
 app.get('/loja/:slug',async(req,res,next)=>{try{if(!multi)return res.sendStatus(404);const tenant=await platformStore.bySlug(req.params.slug);if(!tenant?.active||tenant.id===require('./tenant-context').PLATFORM_TENANT)return res.status(404).send('Loja indisponível.');res.sendFile(require('node:path').join(__dirname,'public/index.html'));}catch(e){next(e)}});

@@ -1,0 +1,31 @@
+process.env.DATA_MODE='demo';process.env.AUTH_MODE='multi';process.env.ADMIN_TOKEN='fulfillment-fixture';
+const {test}=require('node:test'),assert=require('node:assert/strict'),app=require('../server');
+test('edição de modalidade confere frete, recebimentos, agenda e endereço/destinatário com isolamento e histórico',async()=>{
+ const server=app.listen(0),base='http://127.0.0.1:'+server.address().port;
+ async function api(path,body,s,method=body?'POST':'GET'){const r=await fetch(base+path,{method,headers:{'Content-Type':'application/json',...(s?{Cookie:s.cookie,'X-CSRF-Token':s.csrf}:{})},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]};}
+ const ok=async(...args)=>{const r=await api(...args);assert.ok(r.status<300,JSON.stringify(r.data));return r;};
+ try{
+  await ok('/api/auth/bootstrap',{setupKey:process.env.ADMIN_TOKEN,name:'Gestor',username:'gestor',password:'senha-modalidade-gestor'});const m=await ok('/api/auth/management/login',{username:'gestor',password:'senha-modalidade-gestor'}),master={cookie:m.cookie,csrf:m.data.csrf};
+  async function shop(slug){await ok('/api/platform/tenants',{name:'Floricultura '+slug,slug,ownerName:'Responsável '+slug,username:slug,password:'senha-modalidade-loja',profile:{city:'Mauá',state:'SP',deliveryCities:['Mauá'],deliveryFee:2000,pickupAddress:'Rua da Loja, 100, Mauá'}},master);const r=await ok('/api/auth/login',{username:slug,password:'senha-modalidade-loja'});return {cookie:r.cookie,csrf:r.data.csrf};}
+  const a=await shop('modalidade-a'),b=await shop('modalidade-b'),client=(await ok('/api/admin/customers',{name:'Cliente Modalidade',phone:'11988887777'},a)).data;
+  const address=(await ok('/api/admin/customers/'+client.id+'/addresses',{label:'Casa',zipCode:'09370670',street:'Rua das Flores',number:'123',neighborhood:'Matriz',city:'Mauá',state:'SP',recipient:'Destinatária Original',recipientPhone:'11977776666'},a)).data;
+  const create=async extra=>(await ok('/api/admin/orders',{customerId:client.id,recipient:'Pessoa Retirada',fulfillment:'pickup',scheduleMode:'now',paymentMethod:'pix',items:[{id:1,quantity:1}],...extra},a)).data;
+  let order=await create(),path='/api/admin/orders/'+order.id;order=(await ok(path,{action:'payment',confirmed:true,reference:'Recebimento do presente',version:order.version},a,'PATCH')).data;
+  const tomorrow=new Date(require('../public/order-options').localDate()+'T12:00:00Z');tomorrow.setUTCDate(tomorrow.getUTCDate()+1);const date=tomorrow.toISOString().slice(0,10),body={action:'fulfillment',version:order.version,fulfillment:'delivery',scheduleMode:'scheduled',date,timeSlot:'13:40 - 15:20',customerId:client.id,addressId:address.id,addressVersion:address.version};
+  assert.equal((await api(path+'/fulfillment-quote',body)).status,401);assert.equal((await api(path+'/fulfillment-quote',body,{cookie:a.cookie})).status,403);assert.equal((await api(path+'/fulfillment-quote',body,b)).status,404);assert.equal((await api(path+'/fulfillment-quote',{...body,period:'Manhã'},a)).status,400);
+  const quote=(await ok(path+'/fulfillment-quote',body,a)).data;assert.equal(quote.total,order.total+2000);assert.equal(quote.balance,2000);
+  assert.equal((await api(path,{...body,expectedTotal:1},a,'PATCH')).status,409);
+  order=(await ok(path,{...body,expectedTotal:quote.total},a,'PATCH')).data;assert.equal(order.fulfillment,'delivery');assert.equal(order.period,'Tarde');assert.equal(order.paymentStatus,'partial');assert.equal(order.recipient,address.recipient);assert.equal(order.recipientPhone,address.recipientPhone);assert.equal(order.receipts[0].amount,quote.received);
+  assert.equal((await api(path,{...body,expectedTotal:quote.total},a,'PATCH')).status,409);
+  order=(await ok(path,{action:'payment',confirmed:true,reference:'Complemento do frete',version:order.version},a,'PATCH')).data;assert.equal(order.paymentStatus,'paid');
+  const other=await create({fulfillment:'delivery',deliveryAddressId:address.id,deliveryAddressVersion:address.version});
+  const changed=(await ok('/api/admin/customers/'+client.id+'/addresses/'+address.id,{...address,version:address.version,recipient:'Marcia Kawamura',recipientPhone:'11966665555'},a,'PATCH')).data;
+  const selection={action:'selection',field:'address',version:order.version,customerId:client.id,addressId:changed.id,addressVersion:changed.version};
+  order=(await ok(path,selection,a,'PATCH')).data;assert.equal(order.recipient,'Marcia Kawamura');assert.equal(order.recipientPhone,changed.recipientPhone);assert.equal(order.deliveryAddress.version,changed.version);assert.equal((await ok('/api/admin/orders/'+other.id,undefined,a)).data.recipient,'Destinatária Original');
+  const event=(await ok(path+'/events',undefined,a)).data.events[0];assert.equal(event.actor,'Responsável modalidade-a');assert.ok(event.actorId);assert.ok(Date.parse(event.at));for(const field of ['recipient','recipientPhone','deliveryAddress'])assert.ok(event.changes.some(c=>c.field===field));
+  const pickup={action:'fulfillment',version:order.version,fulfillment:'pickup',scheduleMode:'scheduled',date,timeSlot:'13:40 - 15:20',pickupLocationId:'legacy'},credit=(await ok(path+'/fulfillment-quote',pickup,a)).data;assert.equal(credit.credit,2000);
+  order=(await ok(path,{...pickup,expectedTotal:credit.total},a,'PATCH')).data;assert.equal(order.fulfillment,'pickup');assert.equal(order.refundRequired,true);assert.equal(order.pickupLocation.id,'legacy');assert.equal(order.deliveryAddress,null);
+  const ops=(await ok('/api/admin/operations',undefined,a)).data;await ok('/api/admin/operations',{action:'schedule.save',version:ops.state.revision,data:{...ops.state.schedule,enabled:true,horizonDays:10,slots:[{label:'13:40 - 15:20',modes:['pickup'],capacity:0}]}},a);
+  const invalid={...body,version:order.version,addressVersion:changed.version};assert.equal((await api(path+'/fulfillment-quote',invalid,a)).status,400);assert.equal((await api(path,{...invalid,expectedTotal:order.total+2000},a,'PATCH')).status,400);assert.equal((await ok(path,undefined,a)).data.version,order.version);
+ }finally{server.closeAllConnections();await new Promise(r=>server.close(r));}
+});
